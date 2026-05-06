@@ -129,7 +129,7 @@ superAdminRoute.post('/societies', async (c) => {
     contactName: contactName || '', contactEmail, contactPhone: contactPhone || '',
     gst, pan, documents: [],
     status: 'verified',
-    inviteLink: `https://societyos.com/join/${code}`,
+    inviteLink: `https://mygatebell.com/join/${code}`,
     createdAt: new Date().toISOString(),
     plan: plan || 'starter',
     stats: { residents: 0, visitors: 0, complaints: 0 }

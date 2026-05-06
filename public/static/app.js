@@ -201,7 +201,7 @@ function doLogout() {
 
 function setDemoCredentials(role) {
   const creds = {
-    superadmin: { email: 'superadmin@societyos.com', password: 'super@123' },
+    superadmin: { email: 'superadmin@mygatebell.com', password: 'super@123' },
     admin: { email: 'admin@greenwood.com', password: 'admin123' },
     guard: { email: 'guard@greenwood.com', password: 'guard123' },
     resident: { email: 'priya@greenwood.com', password: 'resident123' }
@@ -214,7 +214,7 @@ function setDemoCredentials(role) {
 
 function updateDemoHint(role) {
   const hints = {
-    superadmin: { email: 'superadmin@societyos.com', pass: 'super@123', label: '👑 Super Admin — Manage all societies' },
+    superadmin: { email: 'superadmin@mygatebell.com', pass: 'super@123', label: '👑 Super Admin — Manage all societies' },
     admin: { email: 'admin@greenwood.com', pass: 'admin123', label: 'Admin Access — Full control' },
     guard: { email: 'guard@greenwood.com', pass: 'guard123', label: 'Guard Access — Security panel' },
     resident: { email: 'priya@greenwood.com', pass: 'resident123', label: 'Resident — Flat A-101' }
@@ -227,14 +227,14 @@ function updateDemoHint(role) {
 
 // ============ RENDER LOGIN ============
 function renderLogin() {
-  document.title = 'Sign In — SocietyOS';
+  document.title = 'Sign In — MyGateBell';
   document.body.innerHTML = `
     <div class="login-page">
       <div class="login-hero">
         <div class="login-brand" style="cursor:pointer" onclick="renderLanding()">
           <div class="login-brand-icon"><i class="fa-solid fa-building-shield"></i></div>
           <div class="login-brand-text">
-            <h2>SocietyOS</h2>
+            <h2>MyGateBell</h2>
             <p>Smart Society Platform</p>
           </div>
         </div>
@@ -243,7 +243,7 @@ function renderLogin() {
           <p>A complete platform for managing your residential society — visitors, complaints, billing, notices and security — all in one place.</p>
         </div>
         <div class="login-features">
-          <div class="login-feature-item"><div class="login-feature-icon"><i class="fa-solid fa-shield-check"></i></div><span>Visitor Management & Security</span></div>
+          <div class="login-feature-item"><div class="login-feature-icon"><i class="fa-solid fa-shield"></i></div><span>Visitor Management & Security</span></div>
           <div class="login-feature-item"><div class="login-feature-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div><span>Maintenance Billing & Payments</span></div>
           <div class="login-feature-item"><div class="login-feature-icon"><i class="fa-solid fa-headset"></i></div><span>Complaint Helpdesk & Tracking</span></div>
           <div class="login-feature-item"><div class="login-feature-icon"><i class="fa-solid fa-bell"></i></div><span>Notice Board & Announcements</span></div>
@@ -265,7 +265,7 @@ function renderLogin() {
               <span class="role-option-icon" style="background:rgba(239,68,68,0.1);color:#ef4444"><i class="fa-solid fa-crown"></i></span>
               <span style="font-size:11px">Super&nbsp;Admin</span>
             </div>
-            <div class="role-option role-option-admin active" data-role="admin" onclick="setDemoCredentials('admin')">
+            <!-- <div class="role-option role-option-admin" data-role="admin" onclick="setDemoCredentials('admin')">
               <span class="role-option-icon"><i class="fa-solid fa-user-shield"></i></span>
               <span>Admin</span>
             </div>
@@ -276,11 +276,11 @@ function renderLogin() {
             <div class="role-option role-option-resident" data-role="resident" onclick="setDemoCredentials('resident')">
               <span class="role-option-icon"><i class="fa-solid fa-house-user"></i></span>
               <span>Resident</span>
-            </div>
+            </div> -->
           </div>
           <div class="demo-creds" id="demo-hint">
-            <p>Admin Access — Full control</p>
-            <span>admin@greenwood.com / admin123</span>
+            <p>👑 Super Admin — Manage all societies</p>
+            <span>superadmin@mygatebell.com / super@123</span>
           </div>
           <form onsubmit="doLogin(event)" autocomplete="on">
             <div class="form-group">
@@ -307,15 +307,15 @@ function renderLogin() {
             </button>
           </div>
           <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--gray-400)">
-            Powered by SocietyOS v2.0 · Made in India
+            Powered by MyGateBell v2.0 · Made in India
           </p>
         </div>
       </div>
     </div>
     <div id="toast-container"></div>`;
 
-  // Highlight the admin role as default
-  setDemoCredentials('admin');
+  // Highlight the superadmin role as default
+  setDemoCredentials('superadmin');
 }
 
 // ============ RENDER MAIN APP ============
@@ -359,7 +359,7 @@ function renderApp() {
           <div class="topbar-left">
             <div class="menu-toggle" onclick="toggleMobileSidebar()"><i class="fa-solid fa-bars"></i></div>
             <div class="breadcrumb">
-              <span class="breadcrumb-item">${State.user.societyName || 'SocietyOS'}</span>
+              <span class="breadcrumb-item">${State.user.societyName || 'MyGateBell'}</span>
               <span class="breadcrumb-sep"><i class="fa-solid fa-chevron-right"></i></span>
               <span class="breadcrumb-item active" id="breadcrumb-current">Dashboard</span>
             </div>
@@ -2229,7 +2229,7 @@ async function submitSocietyRegistration(e) {
 // ============================================================
 
 function renderSuperAdminApp() {
-  document.title = 'Super Admin — SocietyOS';
+  document.title = 'Super Admin — MyGateBell';
   State.saPage = State.saPage || 'sa-dashboard';
 
   document.body.innerHTML = `
@@ -2238,7 +2238,7 @@ function renderSuperAdminApp() {
         <div class="sa-sidebar-brand">
           <div class="sa-brand-row">
             <div class="sa-brand-icon"><i class="fa-solid fa-building-shield"></i></div>
-            <div class="sa-brand-name">SocietyOS</div>
+            <div class="sa-brand-name">MyGateBell</div>
           </div>
           <div class="sa-role-pill"><i class="fa-solid fa-crown"></i> Super Admin</div>
         </div>
@@ -2278,7 +2278,7 @@ function renderSuperAdminApp() {
         <div class="sa-topbar">
           <div>
             <div class="sa-topbar-title" id="sa-topbar-title">Dashboard</div>
-            <div class="sa-topbar-subtitle">SocietyOS Management Console</div>
+            <div class="sa-topbar-subtitle">MyGateBell Management Console</div>
           </div>
           <div class="sa-topbar-right">
             <button class="btn btn-sm btn-ghost" onclick="doLogout()">
