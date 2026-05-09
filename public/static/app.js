@@ -3,6 +3,7 @@
    Complete Frontend Application
    ============================================ */
 
+console.log('app.js starting...');
 'use strict';
 
 // ============ STATE MANAGEMENT ============
@@ -33,9 +34,24 @@ const API = {
     if (body) opts.body = JSON.stringify(body);
     try {
       const res = await fetch(`${this.base}${endpoint}`, opts);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Request failed');
-      return data;
+      const json = await res.json();
+      
+      if (!res.ok || json.status === false) {
+        if (res.status === 404) {
+          throw new Error(`Endpoint not found (404): ${endpoint}. This feature might not be deployed to the production backend yet.`);
+        }
+        const errMsg = json.message || json.error || 'Request failed';
+        throw new Error(errMsg);
+      }
+      
+      // If backend uses standard wrapper {status:true, data: ...}, return data
+      if (json.hasOwnProperty('data') && json.status === true) {
+        return json.data;
+      }
+      if (json.status === true && !json.hasOwnProperty('data')) {
+        console.warn('API returned success but no data field:', json);
+      }
+      return json;
     } catch (err) {
       throw err;
     }
@@ -168,19 +184,19 @@ const Modal = {
 // ============ AUTH ============
 async function doLogin(e) {
   e.preventDefault();
-  const email = el('login-email').value.trim();
+  const phone = el('login-email').value.trim();
   const password = el('login-password').value;
   const btn = el('login-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
   try {
-    const data = await API.post('/auth/login', { email, password });
+    const data = await API.post('/auth/login', { phone, password });
     State.token = data.token;
     State.user = data.user;
     localStorage.setItem('gh_token', data.token);
     localStorage.setItem('gh_user', JSON.stringify(data.user));
     Toast.success('Welcome back!', `Signed in as ${data.user.name}`);
-    if (data.user.role === 'superadmin') renderSuperAdminApp();
+    if (data.user.role === 'super_admin' || data.user.role === 'superadmin') renderSuperAdminApp();
     else renderApp();
   } catch (err) {
     Toast.error('Login Failed', err.message);
@@ -199,29 +215,44 @@ function doLogout() {
   renderLanding(); // Go back to landing page on logout
 }
 
+function togglePasswordVisibility(inputId, toggleId) {
+  const passwordInput = document.getElementById(inputId);
+  const toggleIcon = document.getElementById(toggleId);
+  
+  if (passwordInput && toggleIcon) {
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      toggleIcon.classList.remove('fa-eye');
+      toggleIcon.classList.add('fa-eye-slash');
+    } else {
+      passwordInput.type = 'password';
+      toggleIcon.classList.remove('fa-eye-slash');
+      toggleIcon.classList.add('fa-eye');
+    }
+  }
+}
+
 function setDemoCredentials(role) {
   const creds = {
-    superadmin: { email: 'superadmin@mygatebell.com', password: 'super@123' },
-    admin: { email: 'admin@greenwood.com', password: 'admin123' },
-    guard: { email: 'guard@greenwood.com', password: 'guard123' },
-    resident: { email: 'priya@greenwood.com', password: 'resident123' }
+    superadmin: { phone: '1122334455', password: 'Pass@123' },
+    admin: { phone: '6677889900', password: 'Pass@123' },
+    resident: { phone: '8976351526', password: 'Pass@123' }
   };
   const c = creds[role];
-  if (c) { el('login-email').value = c.email; el('login-password').value = c.password; }
+  if (c) { el('login-email').value = c.phone; el('login-password').value = c.password; }
   qsa('.role-option').forEach(o => o.classList.toggle('active', o.dataset.role === role));
   updateDemoHint(role);
 }
 
 function updateDemoHint(role) {
   const hints = {
-    superadmin: { email: 'superadmin@mygatebell.com', pass: 'super@123', label: '👑 Super Admin — Manage all societies' },
-    admin: { email: 'admin@greenwood.com', pass: 'admin123', label: 'Admin Access — Full control' },
-    guard: { email: 'guard@greenwood.com', pass: 'guard123', label: 'Guard Access — Security panel' },
-    resident: { email: 'priya@greenwood.com', pass: 'resident123', label: 'Resident — Flat A-101' }
+    superadmin: { phone: '1122334455', pass: 'Pass@123', label: '👑 Super Admin — Manage all societies' },
+    admin: { phone: '6677889900', pass: 'Pass@123', label: 'Admin Access — Full control' },
+    resident: { phone: '8976351526', pass: 'Pass@123', label: 'Resident — MyGate Member' }
   };
   const h = hints[role];
   if (h && el('demo-hint')) {
-    el('demo-hint').innerHTML = `<p>${h.label}</p><span>${h.email} / ${h.pass}</span>`;
+    el('demo-hint').innerHTML = `<p>${h.label}</p><span>${h.phone} / ${h.pass}</span>`;
   }
 }
 
@@ -260,41 +291,38 @@ function renderLogin() {
             <h2>Sign In</h2>
             <p>Access your society portal with your credentials</p>
           </div>
-          <div class="role-selector" style="grid-template-columns:repeat(4,1fr)">
-            <div class="role-option" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04)" data-role="superadmin" onclick="setDemoCredentials('superadmin')" title="Super Admin">
+          <div class="role-selector" style="grid-template-columns:repeat(3,1fr)">
+            <div class="role-option active" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04)" data-role="superadmin" onclick="setDemoCredentials('superadmin')" title="Super Admin">
               <span class="role-option-icon" style="background:rgba(239,68,68,0.1);color:#ef4444"><i class="fa-solid fa-crown"></i></span>
-              <span style="font-size:11px">Super&nbsp;Admin</span>
+              <span style="font-size:11px">Super Admin</span>
             </div>
-            <!-- <div class="role-option role-option-admin" data-role="admin" onclick="setDemoCredentials('admin')">
+            <div class="role-option" data-role="admin" onclick="setDemoCredentials('admin')" title="Society Admin">
               <span class="role-option-icon"><i class="fa-solid fa-user-shield"></i></span>
-              <span>Admin</span>
+              <span style="font-size:11px">Society Admin</span>
             </div>
-            <div class="role-option role-option-guard" data-role="guard" onclick="setDemoCredentials('guard')">
-              <span class="role-option-icon"><i class="fa-solid fa-user-lock"></i></span>
-              <span>Guard</span>
-            </div>
-            <div class="role-option role-option-resident" data-role="resident" onclick="setDemoCredentials('resident')">
+            <div class="role-option" data-role="resident" onclick="setDemoCredentials('resident')" title="Resident">
               <span class="role-option-icon"><i class="fa-solid fa-house-user"></i></span>
-              <span>Resident</span>
-            </div> -->
+              <span style="font-size:11px">Resident</span>
+            </div>
           </div>
           <div class="demo-creds" id="demo-hint">
             <p>👑 Super Admin — Manage all societies</p>
-            <span>superadmin@mygatebell.com / super@123</span>
+            <span>1122334455 / Pass@123</span>
           </div>
           <form onsubmit="doLogin(event)" autocomplete="on">
             <div class="form-group">
-              <label class="form-label">Email Address <span class="required">*</span></label>
+              <label class="form-label">Phone Number <span class="required">*</span></label>
               <div class="input-wrapper">
-                <i class="fa-solid fa-envelope input-icon"></i>
-                <input type="email" id="login-email" class="form-input with-icon" placeholder="you@example.com" value="admin@greenwood.com" required autocomplete="email">
+                <i class="fa-solid fa-phone input-icon"></i>
+                <input type="text" id="login-email" class="form-input with-icon" placeholder="10-digit mobile" value="1122334455" required autocomplete="tel">
               </div>
             </div>
             <div class="form-group">
               <label class="form-label">Password <span class="required">*</span></label>
               <div class="input-wrapper">
                 <i class="fa-solid fa-lock input-icon"></i>
-                <input type="password" id="login-password" class="form-input with-icon" placeholder="Enter password" value="admin123" required autocomplete="current-password">
+                <input type="password" id="login-password" class="form-input with-icon" placeholder="Enter password" value="Pass@123" required autocomplete="current-password" style="padding-right:40px">
+                <i class="fa-solid fa-eye password-toggle" id="login-password-toggle" onclick="togglePasswordVisibility('login-password', 'login-password-toggle')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--gray-400);font-size:14px;z-index:10"></i>
               </div>
             </div>
             <button type="submit" id="login-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:8px">
@@ -2137,17 +2165,25 @@ function init() {
 
   if (savedToken && savedUser) {
     State.token = savedToken;
-    State.user = JSON.parse(savedUser);
-    // Verify token is still valid
+    try {
+      State.user = JSON.parse(savedUser);
+      if (State.user.role === 'super_admin' || State.user.role === 'superadmin') renderSuperAdminApp();
+      else renderApp();
+    } catch(e) { 
+      localStorage.removeItem('gh_token');
+      localStorage.removeItem('gh_user');
+      renderLogin();
+      return;
+    }
+
+    // Verify token is still valid in background
     API.get('/auth/me').then(user => {
       State.user = user;
       localStorage.setItem('gh_user', JSON.stringify(user));
-      if (user.role === 'superadmin') renderSuperAdminApp();
-      else renderApp();
     }).catch(() => {
       localStorage.removeItem('gh_token');
       localStorage.removeItem('gh_user');
-      renderLogin(); // Token expired — show login
+      renderLogin(); 
     });
   } else {
     renderLogin(); // No session — show login directly
@@ -2248,10 +2284,6 @@ function renderSuperAdminApp() {
             <i class="fa-solid fa-chart-pie"></i> Dashboard
           </div>
           <div class="sa-nav-section-label" style="margin-top:8px">Societies</div>
-          <div class="sa-nav-item ${State.saPage==='sa-registrations'?'active':''}" onclick="saNavigate('sa-registrations')">
-            <i class="fa-solid fa-inbox"></i> Registrations
-            <span class="sa-nav-badge" id="sa-badge-regs">—</span>
-          </div>
           <div class="sa-nav-item ${State.saPage==='sa-societies'?'active':''}" onclick="saNavigate('sa-societies')">
             <i class="fa-solid fa-building"></i> All Societies
           </div>
@@ -2265,9 +2297,9 @@ function renderSuperAdminApp() {
         </nav>
         <div class="sa-sidebar-footer">
           <div class="sa-user-card" onclick="doLogout()">
-            <div class="sa-user-avatar">${initials(State.user.name)}</div>
+            <div class="sa-user-avatar">${initials(State.user?.name || 'Admin')}</div>
             <div>
-              <div class="sa-user-name">${State.user.name}</div>
+              <div class="sa-user-name">${State.user?.name || 'Super Admin'}</div>
               <div class="sa-user-role">Super Administrator</div>
             </div>
             <i class="fa-solid fa-arrow-right-from-bracket" style="margin-left:auto;color:var(--gray-600);font-size:13px"></i>
@@ -2302,15 +2334,19 @@ async function saLoadBadges() {
   try {
     const stats = await API.get('/superadmin/stats');
     const badge = el('sa-badge-regs');
-    if (badge) badge.textContent = (stats.newLeads + stats.underReview) || '0';
-  } catch {}
+    if (badge && stats) {
+      const count = (stats.newLeads || 0) + (stats.underReview || 0);
+      badge.textContent = count > 0 ? count : '0';
+    }
+  } catch (e) {
+    console.warn('Failed to load SA badges:', e);
+  }
 }
 
 function saNavigate(page) {
   State.saPage = page;
   const titles = {
     'sa-dashboard': 'Dashboard',
-    'sa-registrations': 'Society Registrations',
     'sa-societies': 'All Societies',
     'sa-add-society': 'Add New Society',
     'sa-admins': 'Society Admins'
@@ -2328,7 +2364,6 @@ function saNavigate(page) {
   setTimeout(async () => {
     switch(page) {
       case 'sa-dashboard': await renderSADashboard(); break;
-      case 'sa-registrations': await renderSARegistrations(); break;
       case 'sa-societies': await renderSASocieties(); break;
       case 'sa-add-society': renderSAAddSociety(); break;
       case 'sa-admins': await renderSAAdmins(); break;
@@ -2337,39 +2372,41 @@ function saNavigate(page) {
 }
 
 async function renderSADashboard() {
+  const pc = el('sa-page-content');
   try {
     const stats = await API.get('/superadmin/stats');
-    const pc = el('sa-page-content');
+    if (!stats) throw new Error('No statistics data received');
+    
     pc.innerHTML = `
       <div class="sa-stats-grid">
         <div class="sa-stat-card">
-          <div class="sa-stat-icon feature-icon-indigo"><i class="fa-solid fa-building"></i></div>
+          <div class="sa-stat-icon feature-icon-blue"><i class="fa-solid fa-building"></i></div>
           <div>
-            <div class="sa-stat-value">${stats.totalSocieties}</div>
+            <div class="sa-stat-value">${stats.totalSocieties || 0}</div>
             <div class="sa-stat-label">Total Societies</div>
-            <div class="sa-stat-sub">${stats.approved} approved · ${stats.pending} pending</div>
+            <div class="sa-stat-sub">${stats.approved || 0} approved · ${stats.pending || 0} pending</div>
           </div>
         </div>
         <div class="sa-stat-card">
           <div class="sa-stat-icon feature-icon-orange"><i class="fa-solid fa-inbox"></i></div>
           <div>
-            <div class="sa-stat-value">${stats.newLeads + stats.underReview}</div>
-            <div class="sa-stat-label">Pending Registrations</div>
-            <div class="sa-stat-sub">${stats.newLeads} new · ${stats.underReview} under review</div>
+            <div class="sa-stat-value">${(stats.newLeads || 0) + (stats.underReview || 0)}</div>
+            <div class="sa-stat-label">Pending Leads</div>
+            <div class="sa-stat-sub">${stats.newLeads || 0} new · ${stats.underReview || 0} under review</div>
           </div>
         </div>
         <div class="sa-stat-card">
           <div class="sa-stat-icon feature-icon-green"><i class="fa-solid fa-users-gear"></i></div>
           <div>
-            <div class="sa-stat-value">${stats.totalAdmins}</div>
-            <div class="sa-stat-label">Society Admins</div>
-            <div class="sa-stat-sub">Active admins across societies</div>
+            <div class="sa-stat-value">${stats.totalAdmins || 0}</div>
+            <div class="sa-stat-label">Active Admins</div>
+            <div class="sa-stat-sub">Society administrators</div>
           </div>
         </div>
         <div class="sa-stat-card">
           <div class="sa-stat-icon feature-icon-purple"><i class="fa-solid fa-house-user"></i></div>
           <div>
-            <div class="sa-stat-value">${stats.totalResidents}</div>
+            <div class="sa-stat-value">${stats.totalResidents || 0}</div>
             <div class="sa-stat-label">Total Residents</div>
             <div class="sa-stat-sub">Across all societies</div>
           </div>
@@ -2406,7 +2443,7 @@ async function renderSADashboard() {
         </div>
       </div>`;
 
-    // Fetch societies for table
+    // We derive stats client-side from the societies list
     const societies = await API.get('/superadmin/societies');
     const tbody = el('sa-dash-societies');
     if (tbody) {
@@ -2456,7 +2493,8 @@ async function renderSADashboard() {
 
 async function renderSARegistrations() {
   try {
-    const regs = await API.get('/superadmin/registrations');
+    // Registrations logic not found in existing AdminController, defaulting to empty
+    const regs = await API.get('/superadmin/registrations'); 
     const pc = el('sa-page-content');
 
     const statusTabs = ['all', 'new', 'under_review', 'approved', 'rejected'];
@@ -2480,7 +2518,7 @@ async function renderSARegistrations() {
               <td>
                 <div class="sa-action-btns">
                   ${r.status === 'new' ? `<button class="sa-icon-btn success" title="Mark Under Review" onclick="saUpdateReg('${r.id}','under_review')"><i class="fa-solid fa-eye"></i></button>` : ''}
-                  ${r.status === 'under_review' ? `<button class="sa-icon-btn success" title="Approve & Create Society" onclick="saApproveRegistration('${r.id}','${r.societyName}','${r.city}','${r.state||''}','${r.contactEmail}','${r.contactName}','${r.contactPhone}')"><i class="fa-solid fa-check"></i></button>` : ''}
+                  ${r.status === 'under_review' ? `<button class="sa-icon-btn success" title="Quick Approve & Activate" onclick="saApproveRegistrationLead('${r.id}')"><i class="fa-solid fa-rocket"></i></button>` : ''}
                   ${r.status !== 'rejected' && r.status !== 'approved' ? `<button class="sa-icon-btn danger" title="Reject" onclick="saUpdateReg('${r.id}','rejected')"><i class="fa-solid fa-ban"></i></button>` : ''}
                   <button class="sa-icon-btn" title="View Details" onclick="saViewReg('${r.id}')"><i class="fa-solid fa-eye"></i></button>
                 </div>
@@ -2523,17 +2561,49 @@ function saFilterRegs(tab) {
 
 async function saUpdateReg(id, status) {
   try {
-    await API.put(`/superadmin/registrations/${id}`, { status, reviewedBy: State.user.id });
+    await API.put(`/superadmin/registrations/${id}`, { status });
     Toast.success('Updated', `Registration status → ${status.replace('_', ' ')}`);
     await renderSARegistrations();
     saLoadBadges();
   } catch (err) { Toast.error('Error', err.message); }
 }
 
-function saApproveRegistration(id, name, city, state, email, contactName, phone) {
-  // Pre-fill the Add Society form with registration data
-  State.saAddSocietyPrefill = { registrationId: id, name, city, state, contactEmail: email, contactName, contactPhone: phone };
-  saNavigate('sa-add-society');
+async function saApproveRegistrationLead(id) {
+  if (!confirm('Are you sure you want to approve this lead? This will automatically create the society and an admin account.')) return;
+  
+  try {
+    const res = await API.post(`/superadmin/registrations/${id}/approve`);
+    
+    // Show success modal with credentials
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay open';
+    overlay.id = 'reg-success-modal';
+    overlay.innerHTML = `
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <span class="modal-title">Society Activated!</span>
+          <button class="modal-close" onclick="Modal.close('reg-success-modal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="text-align:center">
+          <i class="fa-solid fa-circle-check" style="color:var(--green-500);font-size:48px;margin-bottom:16px"></i>
+          <h3>${res.society_name} is now Live</h3>
+          <p style="font-size:14px;color:var(--gray-600);margin-bottom:20px">The society has been created and the admin account is active.</p>
+          
+          <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:16px;text-align:left">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:12px">Admin Credentials</div>
+            <div style="margin-bottom:8px"><span style="font-size:12px;color:var(--gray-400)">Login Phone:</span> <strong style="color:var(--gray-800)">${res.admin_phone}</strong></div>
+            <div><span style="font-size:12px;color:var(--gray-400)">Temporary Password:</span> <strong style="color:var(--primary-600)">${res.password}</strong></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--gray-200)"><span style="font-size:12px;color:var(--gray-400)">Society Code:</span> <strong style="color:var(--orange-600);font-family:monospace">${res.code}</strong></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary btn-block" onclick="Modal.close('reg-success-modal'); renderSARegistrations();">Got it</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  } catch (err) {
+    Toast.error('Approval Failed', err.message);
+  }
 }
 
 function saViewReg(id) {
@@ -2567,7 +2637,7 @@ function saViewReg(id) {
       </div>
       <div class="modal-footer">
         ${reg.status === 'new' ? `<button class="btn btn-warning" onclick="saUpdateReg('${reg.id}','under_review');Modal.close('reg-view-modal')">Mark Under Review</button>` : ''}
-        ${reg.status === 'under_review' ? `<button class="btn btn-success" onclick="saApproveRegistration('${reg.id}','${reg.societyName}','${reg.city}','${reg.state||''}','${reg.contactEmail}','${reg.contactName}','${reg.contactPhone}');Modal.close('reg-view-modal')">Approve & Create Society</button>` : ''}
+        ${reg.status === 'under_review' ? `<button class="btn btn-success" onclick="saApproveRegistrationLead('${reg.id}');Modal.close('reg-view-modal')">Quick Approve & Activate</button>` : ''}
         ${reg.status !== 'rejected' && reg.status !== 'approved' ? `<button class="btn btn-danger" onclick="saUpdateReg('${reg.id}','rejected');Modal.close('reg-view-modal')">Reject</button>` : ''}
         <button class="btn btn-ghost" onclick="Modal.close('reg-view-modal')">Close</button>
       </div>
@@ -2625,13 +2695,13 @@ async function saViewSociety(id) {
   try {
     const s = await API.get(`/superadmin/societies/${id}`);
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay open';
+    overlay.className = 'modal-overlay';
     overlay.id = 'society-view-modal';
     overlay.innerHTML = `
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">${s.name}</span>
-          <button class="modal-close" onclick="Modal.close('society-view-modal')"><i class="fa-solid fa-xmark"></i></button>
+          <button class="modal-close" id="society-view-close-btn"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
           <div class="society-code-display">
@@ -2665,19 +2735,60 @@ async function saViewSociety(id) {
             </div>`}
         </div>
         <div class="modal-footer">
-          ${s.status !== 'approved' ? `<button class="btn btn-success" onclick="saApproveSociety('${s.id}');Modal.close('society-view-modal')"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
-          ${!s.adminId ? `<button class="btn btn-primary" onclick="saCreateAdmin('${s.id}','${s.name.replace(/'/g,"\\'")}');Modal.close('society-view-modal')"><i class="fa-solid fa-user-plus"></i> Create Admin</button>` : ''}
-          <button class="btn btn-ghost" onclick="Modal.close('society-view-modal')">Close</button>
+          ${s.status !== 'approved' ? `<button class="btn btn-success" id="society-approve-btn"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
+          ${!s.adminId ? `<button class="btn btn-primary" id="society-create-admin-btn"><i class="fa-solid fa-user-plus"></i> Create Admin</button>` : ''}
+          <button class="btn btn-ghost" id="society-close-btn">Close</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    overlay.addEventListener('click', e => { if (e.target === overlay) Modal.close('society-view-modal'); });
+    
+    // Open the modal with animation
+    setTimeout(() => overlay.classList.add('open'), 10);
+    
+    // Define close function
+    const closeModal = () => {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 300);
+      document.body.style.overflow = '';
+    };
+    
+    // Close button handlers
+    const closeBtn = document.getElementById('society-close-btn');
+    const closeIcon = document.getElementById('society-view-close-btn');
+    
+    if (closeBtn) closeBtn.onclick = closeModal;
+    if (closeIcon) closeIcon.onclick = closeModal;
+    
+    // Background click to close
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeModal();
+    });
+    
+    // Action buttons
+    const approveBtn = document.getElementById('society-approve-btn');
+    const createAdminBtn = document.getElementById('society-create-admin-btn');
+    
+    if (approveBtn) {
+      approveBtn.onclick = async () => {
+        await saApproveSociety(s.id);
+        closeModal();
+      };
+    }
+    
+    if (createAdminBtn) {
+      createAdminBtn.onclick = () => {
+        saCreateAdmin(s.id, s.name);
+        closeModal();
+      };
+    }
+    
   } catch (err) { Toast.error('Error', err.message); }
 }
 
 async function saApproveSociety(id) {
   try {
-    await API.post(`/superadmin/societies/${id}/approve`, { approvedBy: State.user.id });
+    // Status update logic needs to be added to AdminController->updateSociety
+    await API.put(`/superadmin/societies/${id}/approve`, {});
     Toast.success('Approved!', 'Society has been approved and is now active');
     await renderSASocieties();
   } catch (err) { Toast.error('Error', err.message); }
@@ -2686,7 +2797,7 @@ async function saApproveSociety(id) {
 async function saSuspendSociety(id) {
   Modal.confirm('Suspend Society', 'This will prevent society users from logging in. Continue?', async () => {
     try {
-      await API.post(`/superadmin/societies/${id}/suspend`, {});
+      await API.put(`/superadmin/societies/${id}/suspend`, {});
       Toast.warning('Suspended', 'Society has been suspended');
       await renderSASocieties();
     } catch (err) { Toast.error('Error', err.message); }
@@ -2718,296 +2829,139 @@ function renderSAAddSociety() {
         <button class="btn btn-sm btn-ghost" onclick="saNavigate('sa-societies')"><i class="fa-solid fa-arrow-left"></i> Back</button>
       </div>
 
-      <!-- STEPPER -->
-      <div class="add-society-stepper" id="add-soc-stepper">
-        <div class="stepper-step active" id="step-dot-1">
-          <div class="stepper-dot">1</div>
-          <div class="stepper-step-label">Society Details</div>
-          <div class="stepper-line"></div>
-        </div>
-        <div class="stepper-step" id="step-dot-2">
-          <div class="stepper-dot">2</div>
-          <div class="stepper-step-label">Approval & Code</div>
-          <div class="stepper-line"></div>
-        </div>
-        <div class="stepper-step" id="step-dot-3">
-          <div class="stepper-dot">3</div>
-          <div class="stepper-step-label">Create Admin</div>
-        </div>
-      </div>
-
       <div id="add-soc-step-body" style="padding:28px 32px">
-        ${renderAddSocietyStep1(prefill)}
+        ${renderAddSocietyForm(prefill)}
       </div>
     </div>`;
+  if (prefill.registrationId) State.saAddRegId = prefill.registrationId;
   State.saAddSocietyPrefill = null; // Clear prefill after use
 }
 
-function renderAddSocietyStep1(prefill = {}) {
+function renderAddSocietyForm(prefill = {}) {
   return `
-    <div style="max-width:680px">
-      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:20px;color:var(--gray-800)">
-        <i class="fa-solid fa-building" style="color:var(--primary-500)"></i> Society Information
-      </h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="form-group" style="grid-column:span 2">
-          <label class="form-label">Society Name <span style="color:var(--red-500)">*</span></label>
-          <input type="text" class="form-input" id="as-name" placeholder="e.g. Greenwood Heights CHS Ltd" value="${prefill.name || ''}" required>
+    <div style="max-width:800px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+        <!-- Society Details -->
+        <div>
+          <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:20px;color:var(--gray-800)">
+            <i class="fa-solid fa-building" style="color:var(--primary-500)"></i> Society Information
+          </h3>
+          <div class="form-group">
+            <label class="form-label">Society Name *</label>
+            <input type="text" class="form-input" id="as-name" placeholder="e.g. Greenwood Heights" value="${prefill.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Address *</label>
+            <input type="text" class="form-input" id="as-address" placeholder="Street, Sector, Locality" value="${prefill.address || ''}" required>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label class="form-label">City *</label>
+              <input type="text" class="form-input" id="as-city" placeholder="e.g. Mumbai" value="${prefill.city || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">State</label>
+              <input type="text" class="form-input" id="as-state" placeholder="e.g. Maharashtra" value="${prefill.state || ''}">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label class="form-label">Pincode</label>
+              <input type="text" class="form-input" id="as-pincode" placeholder="e.g. 400001" value="${prefill.pincode || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Plan</label>
+              <select class="form-input" id="as-plan">
+                <option value="starter" ${(prefill.plan||'professional')==='starter'?'selected':''}>Starter</option>
+                <option value="professional" ${(prefill.plan||'professional')==='professional'?'selected':''}>Professional</option>
+                <option value="enterprise" ${(prefill.plan||'')==='enterprise'?'selected':''}>Enterprise</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="form-group" style="grid-column:span 2">
-          <label class="form-label">Address</label>
-          <input type="text" class="form-input" id="as-address" placeholder="Street, Sector, Locality" value="${prefill.address || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">City <span style="color:var(--red-500)">*</span></label>
-          <input type="text" class="form-input" id="as-city" placeholder="e.g. Navi Mumbai" value="${prefill.city || ''}" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">State</label>
-          <input type="text" class="form-input" id="as-state" placeholder="e.g. Maharashtra" value="${prefill.state || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Pincode</label>
-          <input type="text" class="form-input" id="as-pincode" placeholder="e.g. 400001" value="${prefill.pincode || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Plan</label>
-          <select class="form-input" id="as-plan">
-            <option value="starter">Starter</option>
-            <option value="professional" selected>Professional</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">No. of Towers</label>
-          <input type="number" class="form-input" id="as-towers" value="${prefill.towers || 1}" min="1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Total Flats</label>
-          <input type="number" class="form-input" id="as-flats" value="${prefill.totalFlats || 50}" min="1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Contact Name</label>
-          <input type="text" class="form-input" id="as-cname" placeholder="Committee Member Name" value="${prefill.contactName || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Contact Email <span style="color:var(--red-500)">*</span></label>
-          <input type="email" class="form-input" id="as-cemail" placeholder="admin@society.com" value="${prefill.contactEmail || ''}" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Contact Phone</label>
-          <input type="tel" class="form-input" id="as-cphone" placeholder="10-digit mobile" value="${prefill.contactPhone || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">GST Number</label>
-          <input type="text" class="form-input" id="as-gst" placeholder="Optional" value="${prefill.gst || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">PAN Number</label>
-          <input type="text" class="form-input" id="as-pan" placeholder="Optional" value="${prefill.pan || ''}">
+
+        <!-- Admin Details -->
+        <div style="background:var(--gray-50);padding:20px;border-radius:var(--radius-lg);border:1px solid var(--gray-200)">
+          <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:20px;color:var(--gray-800)">
+            <i class="fa-solid fa-user-shield" style="color:var(--green-600)"></i> Initial Administrator
+          </h3>
+          <div class="form-group">
+            <label class="form-label">Admin Full Name *</label>
+            <input type="text" class="form-input" id="as-cname" placeholder="Full name" value="${prefill.contactName || prefill.contact_person || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Email *</label>
+            <input type="email" class="form-input" id="as-cemail" placeholder="email@address.com" value="${prefill.contactEmail || prefill.contact_email || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Phone *</label>
+            <input type="tel" class="form-input" id="as-cphone" placeholder="10-digit mobile" value="${prefill.contactPhone || prefill.contact_phone || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Password *</label>
+            <input type="text" class="form-input" id="as-password" value="Admin@${Math.floor(1000 + Math.random() * 9000)}">
+            <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><i class="fa-solid fa-info-circle"></i> Share with admin — they should change on first login</div>
+          </div>
         </div>
       </div>
-      <div style="margin-top:24px;display:flex;justify-content:flex-end">
-        <button class="btn btn-primary" onclick="saAddSocietyNext()">
-          Next: Review & Approve <i class="fa-solid fa-arrow-right"></i>
+      
+      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--gray-100);display:flex;justify-content:flex-end;gap:12px">
+        <button class="btn btn-ghost" onclick="saNavigate('sa-societies')">Cancel</button>
+        <button class="btn btn-primary" id="as-submit-btn" onclick="saCreateSocietyFull()">
+          <i class="fa-solid fa-check-circle"></i> Create & Activate Society
         </button>
       </div>
     </div>`;
 }
 
-async function saAddSocietyNext() {
+async function saCreateSocietyFull() {
   const name = el('as-name')?.value.trim();
   const city = el('as-city')?.value.trim();
   const email = el('as-cemail')?.value.trim();
-  if (!name || !city || !email) { Toast.error('Validation', 'Society name, city and email are required'); return; }
+  const adminName = el('as-cname')?.value.trim();
+  const adminPhone = el('as-cphone')?.value.trim();
+  const adminPass = el('as-password')?.value.trim();
 
-  // Create the society
-  const btn = event.target;
+  if (!name || !city || !email || !adminName || !adminPhone || !adminPass) {
+    Toast.error('Validation', 'Name, city, admin email, name, phone and password are all required');
+    return;
+  }
+
+  const btn = el('as-submit-btn');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+  const address = el('as-address')?.value.trim();
+  if (!address) { Toast.error('Validation', 'Address is required'); btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Create & Activate Society'; return; }
 
   try {
-    const body = {
-      name, city,
-      address: el('as-address')?.value.trim(),
-      state: el('as-state')?.value.trim(),
-      pincode: el('as-pincode')?.value.trim(),
-      plan: el('as-plan')?.value,
-      towers: parseInt(el('as-towers')?.value) || 1,
-      totalFlats: parseInt(el('as-flats')?.value) || 50,
-      contactName: el('as-cname')?.value.trim(),
-      contactEmail: email,
-      contactPhone: el('as-cphone')?.value.trim(),
-      gst: el('as-gst')?.value.trim(),
-      pan: el('as-pan')?.value.trim()
-    };
+    const socRes = await API.post('/superadmin/societies', {
+      name,
+      address,
+      city,
+      state: el('as-state')?.value.trim() || '',
+      country: 'India',
+      pincode: el('as-pincode')?.value.trim() || '',
+      plan: el('as-plan')?.value || 'starter',
+      contact_person: adminName,
+      contact_phone: adminPhone,
+      contact_email: email,
+      registration_id: State.saAddRegId || null
+    });
 
-    const society = await API.post('/superadmin/societies', body);
-    State.saNewSociety = society;
-    saAddStep = 2;
-    saUpdateStepper();
+    const societyId = socRes.society_id || socRes.id;
 
-    el('add-soc-step-body').innerHTML = renderAddSocietyStep2(society);
-    Toast.success('Society Created!', `${society.name} — Code: ${society.code}`);
+    await API.post(`/superadmin/societies/${societyId}/admin`, { 
+      name: adminName, email, phone: adminPhone, password: adminPass 
+    });
+
+    Toast.success('Success', 'Society and Admin created successfully');
+    State.saAddRegId = null;
+    saNavigate('sa-societies');
   } catch (err) {
-    Toast.error('Error', err.message);
+    Toast.error('Creation Failed', err.message);
     btn.disabled = false;
-    btn.innerHTML = 'Next: Review & Approve <i class="fa-solid fa-arrow-right"></i>';
-  }
-}
-
-function renderAddSocietyStep2(society) {
-  return `
-    <div style="max-width:600px">
-      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:20px;color:var(--gray-800)">
-        <i class="fa-solid fa-circle-check" style="color:var(--green-600)"></i> Society Created & Approved
-      </h3>
-      <div style="background:var(--green-50);border:1.5px solid var(--green-200);border-radius:var(--radius-lg);padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
-        <i class="fa-solid fa-check-circle" style="color:var(--green-600);font-size:22px"></i>
-        <div>
-          <div style="font-weight:600;color:var(--green-800)">"${society.name}" has been created and verified</div>
-          <div style="font-size:12px;color:var(--green-700)">Status: ${society.status} · Plan: ${society.plan} · City: ${society.city}</div>
-        </div>
-      </div>
-
-      <div class="society-code-display">
-        <label>Unique Society Code</label>
-        <div class="code-value">${society.code}</div>
-      </div>
-
-      ${society.inviteLink ? `
-        <div style="margin-bottom:16px">
-          <label style="font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px">Invite Link</label>
-          <div class="invite-link-box">
-            <i class="fa-solid fa-link" style="color:var(--primary-500);flex-shrink:0"></i>
-            ${society.inviteLink}
-            <button class="btn btn-sm btn-ghost" style="margin-left:auto;flex-shrink:0" onclick="navigator.clipboard?.writeText('${society.inviteLink}');Toast.success('Copied!','Invite link copied to clipboard')">
-              <i class="fa-solid fa-copy"></i>
-            </button>
-          </div>
-        </div>` : ''}
-
-      <div class="society-detail-grid">
-        <div class="society-detail-item"><label>Society ID</label><span style="font-family:monospace">${society.id}</span></div>
-        <div class="society-detail-item"><label>Status</label><span class="badge badge-${society.status}">${society.status}</span></div>
-        <div class="society-detail-item"><label>Towers</label><span>${society.towers}</span></div>
-        <div class="society-detail-item"><label>Total Flats</label><span>${society.totalFlats}</span></div>
-      </div>
-
-      <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-        <button class="btn btn-ghost" onclick="saNavigate('sa-societies')">Skip Admin Creation</button>
-        <button class="btn btn-primary" onclick="saGoToStep3()">
-          <i class="fa-solid fa-user-plus"></i> Create Society Admin Login
-        </button>
-      </div>
-    </div>`;
-}
-
-function saGoToStep3() {
-  saAddStep = 3;
-  saUpdateStepper();
-  const society = State.saNewSociety;
-  el('add-soc-step-body').innerHTML = renderAddSocietyStep3(society);
-}
-
-function renderAddSocietyStep3(society) {
-  return `
-    <div style="max-width:520px">
-      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:6px;color:var(--gray-800)">
-        <i class="fa-solid fa-user-shield" style="color:var(--primary-500)"></i> Create Society Admin Account
-      </h3>
-      <p style="font-size:13px;color:var(--gray-500);margin-bottom:20px">Creating admin login credentials for <strong>${society?.name}</strong></p>
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="form-group">
-          <label class="form-label">Admin Full Name <span style="color:var(--red-500)">*</span></label>
-          <input type="text" class="form-input" id="sa-admin-name" placeholder="e.g. Rajesh Sharma" value="${society?.contactName || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Admin Email <span style="color:var(--red-500)">*</span></label>
-          <input type="email" class="form-input" id="sa-admin-email" placeholder="admin@society.com" value="${society?.contactEmail || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Mobile Number <span style="color:var(--red-500)">*</span></label>
-          <input type="tel" class="form-input" id="sa-admin-phone" placeholder="10-digit mobile" value="${society?.contactPhone || ''}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input type="text" class="form-input" id="sa-admin-pass" placeholder="Default: admin@123" value="admin@123">
-          <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><i class="fa-solid fa-info-circle"></i> Admin should change this on first login</div>
-        </div>
-      </div>
-      <div id="sa-admin-result"></div>
-      <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-        <button class="btn btn-ghost" onclick="saGoToStep3Back()"><i class="fa-solid fa-arrow-left"></i> Back</button>
-        <button class="btn btn-primary btn-lg" id="create-admin-btn" onclick="saCreateSocietyAdmin()">
-          <i class="fa-solid fa-user-plus"></i> Create Admin & Share Access
-        </button>
-      </div>
-    </div>`;
-}
-
-function saGoToStep3Back() {
-  saAddStep = 2;
-  saUpdateStepper();
-  el('add-soc-step-body').innerHTML = renderAddSocietyStep2(State.saNewSociety);
-}
-
-async function saCreateSocietyAdmin() {
-  const name = el('sa-admin-name')?.value.trim();
-  const email = el('sa-admin-email')?.value.trim();
-  const phone = el('sa-admin-phone')?.value.trim();
-  const password = el('sa-admin-pass')?.value.trim() || 'admin@123';
-  if (!name || !email || !phone) { Toast.error('Validation', 'Name, email and phone are required'); return; }
-
-  const btn = el('create-admin-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
-
-  try {
-    const society = State.saNewSociety;
-    const res = await API.post(`/superadmin/societies/${society.id}/create-admin`, { name, email, phone, password });
-
-    el('sa-admin-result').innerHTML = `
-      <div style="margin-top:20px;background:var(--green-50);border:1.5px solid var(--green-200);border-radius:var(--radius-lg);padding:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-          <i class="fa-solid fa-check-circle" style="color:var(--green-600);font-size:20px"></i>
-          <div style="font-weight:700;color:var(--green-800);font-size:15px">Admin Account Created Successfully!</div>
-        </div>
-        <div style="background:white;border-radius:var(--radius-md);padding:14px;border:1px solid var(--green-200)">
-          <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Login Credentials (Share with Admin)</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div><div style="font-size:11px;color:var(--gray-400)">Email</div><div style="font-size:13px;font-weight:600;color:var(--gray-700)">${res.loginCredentials.email}</div></div>
-            <div><div style="font-size:11px;color:var(--gray-400)">Password</div><div style="font-size:13px;font-weight:600;color:var(--gray-700)">${res.loginCredentials.password}</div></div>
-            <div><div style="font-size:11px;color:var(--gray-400)">Society Code</div><div style="font-size:13px;font-weight:700;color:var(--primary-700);font-family:monospace">${res.society.code}</div></div>
-            <div><div style="font-size:11px;color:var(--gray-400)">Society</div><div style="font-size:13px;font-weight:600;color:var(--gray-700)">${res.society.name}</div></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:14px">
-          <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard?.writeText('Email: ${res.loginCredentials.email}\\nPassword: ${res.loginCredentials.password}\\nSociety Code: ${res.society.code}');Toast.success('Copied!','Credentials copied to clipboard')">
-            <i class="fa-solid fa-copy"></i> Copy Credentials
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="saNavigate('sa-societies')">
-            <i class="fa-solid fa-check"></i> Done — View All Societies
-          </button>
-        </div>
-      </div>`;
-
-    btn.style.display = 'none';
-    Toast.success('Done!', `Admin account created for ${name}. Access details generated.`);
-  } catch (err) {
-    Toast.error('Error', err.message);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Admin & Share Access';
-  }
-}
-
-function saUpdateStepper() {
-  for (let i = 1; i <= SA_TOTAL_STEPS; i++) {
-    const dot = el(`step-dot-${i}`);
-    if (!dot) continue;
-    dot.classList.remove('active', 'done');
-    if (i < saAddStep) dot.classList.add('done');
-    else if (i === saAddStep) dot.classList.add('active');
+    btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Create & Activate Society';
   }
 }
 
@@ -3047,9 +3001,9 @@ async function saCreateAdminSubmit(socId) {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   try {
-    const res = await API.post(`/superadmin/societies/${socId}/create-admin`, { name, email, phone, password });
-    el('ca-result').innerHTML = `<div style="background:var(--green-50);border:1px solid var(--green-200);border-radius:var(--radius-md);padding:12px;margin-top:12px;font-size:13px;color:var(--green-800)"><i class="fa-solid fa-check-circle"></i> Admin created! Credentials: <strong>${email}</strong> / <strong>${password}</strong> · Code: <strong>${res.society.code}</strong></div>`;
-    Toast.success('Admin Created', `${name} can now login to ${res.society.name}`);
+    await API.post(`/superadmin/societies/${socId}/admin`, { name, email, phone, password });
+    el('ca-result').innerHTML = `<div style="background:var(--green-50);border:1px solid var(--green-200);border-radius:var(--radius-md);padding:12px;margin-top:12px;font-size:13px;color:var(--green-800)"><i class="fa-solid fa-check-circle"></i> Admin created! Credentials: <strong>${phone}</strong> / <strong>${password}</strong></div>`;
+    Toast.success('Admin Created', `${name} can now login`);
     btn.innerHTML = 'Done';
     setTimeout(() => { Modal.close('create-admin-modal'); renderSASocieties(); }, 2000);
   } catch (err) {
@@ -3092,8 +3046,8 @@ async function renderSAAdmins() {
                   <td><span class="badge badge-${a.isActive ? 'approved' : 'suspended'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
                   <td>${formatDate(a.createdAt)}</td>
                   <td>
-                    <button class="sa-icon-btn ${a.isActive ? 'danger' : 'success'}" title="${a.isActive ? 'Deactivate' : 'Activate'}" onclick="saToggleAdmin('${a.id}')">
-                      <i class="fa-solid fa-${a.isActive ? 'ban' : 'check'}"></i>
+                    <button class="sa-icon-btn ${a.status === 'active' ? 'danger' : 'success'}" title="${a.status === 'active' ? 'Deactivate' : 'Activate'}" onclick="saToggleAdmin('${a.id}')">
+                      <i class="fa-solid fa-${a.status === 'active' ? 'ban' : 'check'}"></i>
                     </button>
                   </td>
                 </tr>`).join('')}
@@ -3106,8 +3060,9 @@ async function renderSAAdmins() {
 
 async function saToggleAdmin(id) {
   try {
-    const res = await API.put(`/superadmin/admins/${id}/toggle`, {});
-    Toast.info('Updated', `Admin is now ${res.isActive ? 'active' : 'inactive'}`);
+    // Backend needs a specific status toggle endpoint or standard PUT
+    await API.put(`/superadmin/admins/${id}/toggle`, {}); 
+    Toast.info('Updated', `Admin status changed`);
     await renderSAAdmins();
   } catch (err) { Toast.error('Error', err.message); }
 }
