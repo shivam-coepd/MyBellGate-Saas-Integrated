@@ -29,16 +29,25 @@ const API = {
   base: '/api',
   async request(method, endpoint, body = null) {
     const headers = { 'Content-Type': 'application/json' };
-    if (State.token) headers['Authorization'] = `Bearer ${State.token}`;
+    if (State.token) {
+      headers['Authorization'] = `Bearer ${State.token}`;
+      console.log('🔑 Using token:', State.token.substring(0, 20) + '...');
+    } else {
+      console.warn('⚠️ No token available for request:', endpoint);
+    }
     const opts = { method, headers };
     if (body) opts.body = JSON.stringify(body);
     try {
+      console.log(`📡 API ${method} ${this.base}${endpoint}`);
       const res = await fetch(`${this.base}${endpoint}`, opts);
       const json = await res.json();
       
       if (!res.ok || json.status === false) {
         if (res.status === 404) {
           throw new Error(`Endpoint not found (404): ${endpoint}. This feature might not be deployed to the production backend yet.`);
+        }
+        if (res.status === 401) {
+          throw new Error('Authorization failed. Please login again.');
         }
         const errMsg = json.message || json.error || 'Request failed';
         throw new Error(errMsg);
@@ -206,13 +215,38 @@ async function doLogin(e) {
 }
 
 function doLogout() {
-  API.post('/auth/logout', {}).catch(() => {});
+  // Clear all stored data
+  localStorage.removeItem('gh_token');
+  localStorage.removeItem('gh_user');
+  
+  // Clear state
   State.token = null;
   State.user = null;
   State.saPage = null;
-  localStorage.removeItem('gh_token');
-  localStorage.removeItem('gh_user');
-  renderLanding(); // Go back to landing page on logout
+  State.currentPage = 'dashboard';
+  State.data = {
+    dashStats: null,
+    residents: [],
+    flats: [],
+    visitors: [],
+    complaints: [],
+    notices: [],
+    bills: []
+  };
+  
+  // Destroy all charts if they exist
+  if (State.charts.visitor) State.charts.visitor.destroy();
+  if (State.charts.complaint) State.charts.complaint.destroy();
+  State.charts = {};
+  
+  // Clear any cached data
+  State.modals = {};
+  
+  // Show toast notification
+  Toast.success('Signed Out', 'You have been logged out successfully');
+  
+  // Render login page
+  renderLogin();
 }
 
 function togglePasswordVisibility(inputId, toggleId) {
@@ -2160,33 +2194,45 @@ function setupModalClose(id) {
 
 // ============ INIT ============
 function init() {
+  console.log('=== INITIALIZING APP ===');
   const savedToken = localStorage.getItem('gh_token');
   const savedUser = localStorage.getItem('gh_user');
+  
+  console.log('Saved Token:', savedToken ? 'EXISTS' : 'NOT FOUND');
+  console.log('Saved User:', savedUser ? savedUser : 'NOT FOUND');
 
   if (savedToken && savedUser) {
     State.token = savedToken;
     try {
       State.user = JSON.parse(savedUser);
-      if (State.user.role === 'super_admin' || State.user.role === 'superadmin') renderSuperAdminApp();
-      else renderApp();
+      console.log('✅ User parsed successfully:', State.user);
+      console.log('User role:', State.user.role);
+      
+      // Trust the saved session and render immediately
+      // (Backend doesn't have /auth/me endpoint, so we skip verification)
+      if (State.user.role === 'super_admin' || State.user.role === 'superadmin') {
+        console.log('👑 Rendering Super Admin App...');
+        renderSuperAdminApp();
+      } else {
+        console.log('🏠 Rendering Regular App...');
+        renderApp();
+      }
+      
+      console.log('✅ Session restored successfully from localStorage');
+      
     } catch(e) { 
+      // Failed to parse user data
+      console.error('❌ Failed to restore session:', e);
       localStorage.removeItem('gh_token');
       localStorage.removeItem('gh_user');
+      State.token = null;
+      State.user = null;
       renderLogin();
-      return;
     }
-
-    // Verify token is still valid in background
-    API.get('/auth/me').then(user => {
-      State.user = user;
-      localStorage.setItem('gh_user', JSON.stringify(user));
-    }).catch(() => {
-      localStorage.removeItem('gh_token');
-      localStorage.removeItem('gh_user');
-      renderLogin(); 
-    });
   } else {
-    renderLogin(); // No session — show login directly
+    // No session — show login page
+    console.log('ℹ️ No session found, showing login');
+    renderLogin();
   }
 }
 
@@ -2373,9 +2419,21 @@ function saNavigate(page) {
 
 async function renderSADashboard() {
   const pc = el('sa-page-content');
+  if (!pc) {
+    console.error('Page content element not found');
+    return;
+  }
+  
   try {
+    console.log('Loading Super Admin dashboard...');
+    
+    // Show loading state
+    pc.innerHTML = '<div class="skeleton skeleton-card" style="height:200px"></div>';
+    
     const stats = await API.get('/superadmin/stats');
     if (!stats) throw new Error('No statistics data received');
+    
+    console.log('Stats loaded:', stats);
     
     pc.innerHTML = `
       <div class="sa-stats-grid">
@@ -2444,51 +2502,73 @@ async function renderSADashboard() {
       </div>`;
 
     // We derive stats client-side from the societies list
-    const societies = await API.get('/superadmin/societies');
-    const tbody = el('sa-dash-societies');
-    if (tbody) {
-      tbody.innerHTML = societies.slice(0, 5).map(s => `
-        <tr>
-          <td><div class="society-name">${s.name}</div><div style="font-size:11px;color:var(--gray-400)">${s.contactEmail}</div></td>
-          <td><span class="society-code">${s.code}</span></td>
-          <td>${s.city}, ${s.state}</td>
-          <td><span class="badge badge-${s.plan}">${s.plan}</span></td>
-          <td><span class="badge badge-${s.status}">${s.status}</span></td>
-          <td>${formatDate(s.createdAt)}</td>
-        </tr>`).join('');
+    let societies = [];
+    try {
+      societies = await API.get('/superadmin/societies');
+      const tbody = el('sa-dash-societies');
+      if (tbody && societies) {
+        tbody.innerHTML = societies.slice(0, 5).map(s => `
+          <tr>
+            <td><div class="society-name">${s.name}</div><div style="font-size:11px;color:var(--gray-400)">${s.contactEmail}</div></td>
+            <td><span class="society-code">${s.code}</span></td>
+            <td>${s.city}, ${s.state}</td>
+            <td><span class="badge badge-${s.plan}">${s.plan}</span></td>
+            <td><span class="badge badge-${s.status}">${s.status}</span></td>
+            <td>${formatDate(s.createdAt)}</td>
+          </tr>`).join('');
+      }
+    } catch (err) {
+      console.warn('Failed to load societies:', err);
+      const tbody = el('sa-dash-societies');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--gray-400)">Failed to load societies</td></tr>';
     }
 
     // Charts
     setTimeout(() => {
-      const trendCtx = el('sa-trend-chart');
-      if (trendCtx && stats.trend) {
-        new Chart(trendCtx, {
-          type: 'bar',
-          data: {
-            labels: stats.trend.map(t => t.month),
-            datasets: [{
-              data: stats.trend.map(t => t.count),
-              backgroundColor: 'rgba(99,102,241,0.7)',
-              borderRadius: 6
-            }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-        });
-      }
-      const planCtx = el('sa-plan-chart');
-      if (planCtx && stats.planDist) {
-        new Chart(planCtx, {
-          type: 'doughnut',
-          data: {
-            labels: stats.planDist.map(p => p.plan.charAt(0).toUpperCase() + p.plan.slice(1)),
-            datasets: [{ data: stats.planDist.map(p => p.count), backgroundColor: ['#d1d5db','#818cf8','#fed7aa'], borderWidth: 0 }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
-        });
+      try {
+        const trendCtx = el('sa-trend-chart');
+        if (trendCtx && stats.trend && stats.trend.length > 0) {
+          new Chart(trendCtx, {
+            type: 'bar',
+            data: {
+              labels: stats.trend.map(t => t.month),
+              datasets: [{
+                data: stats.trend.map(t => t.count),
+                backgroundColor: 'rgba(99,102,241,0.7)',
+                borderRadius: 6
+              }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+          });
+        }
+        const planCtx = el('sa-plan-chart');
+        if (planCtx && stats.planDist && stats.planDist.length > 0) {
+          new Chart(planCtx, {
+            type: 'doughnut',
+            data: {
+              labels: stats.planDist.map(p => p.plan.charAt(0).toUpperCase() + p.plan.slice(1)),
+              datasets: [{ data: stats.planDist.map(p => p.count), backgroundColor: ['#d1d5db','#818cf8','#fed7aa'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+          });
+        }
+      } catch (chartErr) {
+        console.warn('Chart rendering failed:', chartErr);
       }
     }, 100);
 
-  } catch (err) { showError('Failed to load Super Admin dashboard'); }
+  } catch (err) {
+    console.error('Super Admin dashboard error:', err);
+    pc.innerHTML = `
+      <div style="text-align:center;padding:60px 20px">
+        <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+        <h3 style="margin-bottom:8px;color:var(--red-600)">Failed to Load Dashboard</h3>
+        <p style="color:var(--gray-500);margin-bottom:20px">${err.message}</p>
+        <button class="btn btn-primary" onclick="renderSADashboard()">
+          <i class="fa-solid fa-rotate-right"></i> Retry
+        </button>
+      </div>`;
+  }
 }
 
 async function renderSARegistrations() {

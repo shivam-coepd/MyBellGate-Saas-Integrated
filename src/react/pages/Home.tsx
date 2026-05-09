@@ -34,6 +34,28 @@ const Home: React.FC = () => {
                 Trusted by 1,000+ top gated communities
               </div>
             </div>
+            <div className="hero-trust">
+              <div className="hero-trust-avatars">
+                <div className="hero-trust-avatar" style={{background:'linear-gradient(135deg,#6366f1,#818cf8)'}}>
+                  RS
+                </div>
+                <div className="hero-trust-avatar" style={{background:'linear-gradient(135deg,#22c55e,#16a34a)'}}>
+                  PM
+                </div>
+                <div className="hero-trust-avatar" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}>
+                  AK
+                </div>
+                <div className="hero-trust-avatar" style={{background:'linear-gradient(135deg,#ec4899,#be185d)'}}>
+                  SR
+                </div>
+                <div className="hero-trust-avatar" style={{background:'linear-gradient(135deg,#14b8a6,#0d9488)'}}>
+                  VN
+                </div>
+              </div>
+              <div className="hero-trust-text">
+                <strong>12,000+ residents</strong> managed daily
+              </div>
+            </div>
           </div>
           <div className="relative flex justify-center lg:justify-end">
             <div className="relative animate-float">
@@ -132,6 +154,73 @@ const Home: React.FC = () => {
             <p className="text-on-surface-variant font-label-caps uppercase tracking-widest text-xs">
               App Store Rating
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* LOGO MARQUEE */}
+      <section>
+        <div className="logos-section">
+          <div className="logos-label">
+            Trusted by societies in cities across India
+          </div>
+          <div className="logos-track" id="logos-track">
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Greenwood Heights · Navi
+              Mumbai
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Sunrise Valley · Pune
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Park View Residency ·
+              Bengaluru
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Blue Bell Towers ·
+              Kolkata
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Silver Oak Enclave ·
+              Gurgaon
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Lotus Garden · Ahmedabad
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Royal Palms · Mumbai
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Palm Heights · Chennai
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Greenwood Heights · Navi
+              Mumbai
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Sunrise Valley · Pune
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Park View Residency ·
+              Bengaluru
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Blue Bell Towers ·
+              Kolkata
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Silver Oak Enclave ·
+              Gurgaon
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Lotus Garden · Ahmedabad
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Royal Palms · Mumbai
+            </span>
+            <span className="logo-item">
+              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Palm Heights · Chennai
+            </span>
           </div>
         </div>
       </section>
