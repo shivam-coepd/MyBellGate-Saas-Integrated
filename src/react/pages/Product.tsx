@@ -1,4 +1,5 @@
 import React from 'react';
+import { Home, Shield, LayoutDashboard, CheckCircle2, ArrowRight, Fingerprint, Lock, Cloud } from 'lucide-react';
 
 const Product: React.FC = () => {
   return (
@@ -47,15 +48,15 @@ const Product: React.FC = () => {
             <div className="md:col-span-8 bg-white p-10 rounded-[16px] ambient-shadow group hover:-translate-y-1 transition-transform">
               <div className="flex flex-col md:flex-row gap-10">
                 <div className="flex-1">
-                  <span className="material-symbols-outlined text-4xl text-secondary mb-6">home_app_logo</span>
+                  <Home className="w-10 h-10 text-secondary mb-6" />
                   <h3 className="font-h2 text-[32px] text-primary mb-4">Resident App</h3>
                   <p className="text-on-surface-variant mb-6">Total control of your home sanctuary. Approve visitors, book amenities, and pay dues with one-touch efficiency.</p>
                   <ul className="space-y-3 mb-8">
-                    <li className="flex items-center gap-2 text-sm font-medium"><span className="material-symbols-outlined text-secondary text-sm">check_circle</span> Instant Visitor Alerts</li>
-                    <li className="flex items-center gap-2 text-sm font-medium"><span className="material-symbols-outlined text-secondary text-sm">check_circle</span> Digital Clubhouse Booking</li>
-                    <li className="flex items-center gap-2 text-sm font-medium"><span className="material-symbols-outlined text-secondary text-sm">check_circle</span> Panic Button Emergency Link</li>
+                    <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="w-4 h-4 text-secondary" /> Instant Visitor Alerts</li>
+                    <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="w-4 h-4 text-secondary" /> Digital Clubhouse Booking</li>
+                    <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="w-4 h-4 text-secondary" /> Panic Button Emergency Link</li>
                   </ul>
-                  <button className="text-secondary font-semibold flex items-center gap-2 hover:gap-3 transition-all">Download App <span className="material-symbols-outlined">arrow_forward</span></button>
+                  <button className="text-secondary font-semibold flex items-center gap-2 hover:gap-3 transition-all">Download App <ArrowRight className="w-5 h-5" /></button>
                 </div>
                 <div className="flex-1 bg-surface-container rounded-xl overflow-hidden min-h-[300px]">
                   <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAiHPqv4qUvZXZlIWxV2fBxIhhs3LCPNgH0akk8w82pypPBfpVM-kkAPTlXi0SGL1bIkrYZ92MGihGlFlRP40DxYOxHk3Sg9wNI9NVttqOt4j1-yrBHEcmkZe4Oy9zUlVDpPHdD98gcP-5PT4F372ssM2UvJ843b9ovSQEWXIWpYFNGWtNJuO2KxjXIMlTCxesK8N3gIx9JEYpFHyCrGl9dvhp-4Egmie3T4Y5_4goPp6Zi-0yiZjNiPDHnmuPrIHZ6W1MR3MVP8c" alt="Resident App UI" />
@@ -64,7 +65,7 @@ const Product: React.FC = () => {
             </div>
             {/* Guard Station */}
             <div className="md:col-span-4 bg-primary-container p-10 rounded-[16px] text-white">
-              <span className="material-symbols-outlined text-4xl text-blue-400 mb-6">security</span>
+              <Shield className="w-10 h-10 text-blue-400 mb-6" />
               <h3 className="font-h2 text-[28px] mb-4 leading-tight">Guard Desk Station</h3>
               <p className="text-slate-400 mb-8">Empowering security staff with rapid verification tools and offline capability for zero-latency entry management.</p>
               <div className="rounded-xl overflow-hidden mb-6 aspect-square bg-white/5">
@@ -78,7 +79,7 @@ const Product: React.FC = () => {
                 <img className="w-full h-auto" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzKXP7VmWctQi2L1W0sCIHGqpQ_1yhnSSbq7UKerkxZnam0hIMfCMRl6r3Hjq3rcAwEbG16UVyzhInVOVPhKOgdchju1vxd_VZqJX44sYDZgFWp6QmLV7KrYnM3AS4qNFoMeUqyd7zLkRFx7EIWhB74NJDN7tGacLc--wor_kt7pL029ylWlfMKNOibjRx7eFLuwfTbgGzN_sE7HkvcwNzYUT2fqbsCAb0Kwtv5X6S4HFqpPfzSrzy7KXsFxgq8R4B4x7VrOn2TeQ" alt="Admin Dashboard" />
               </div>
               <div className="md:w-1/2">
-                <span className="material-symbols-outlined text-4xl text-secondary mb-6">dashboard</span>
+                <LayoutDashboard className="w-10 h-10 text-secondary mb-6" />
                 <h3 className="font-h2 text-[32px] text-primary mb-4">Admin Command Center</h3>
                 <p className="text-on-surface-variant text-body-lg mb-8">The central nervous system for community management. Generate financial reports, manage staff shifts, and send community-wide broadcasts with unprecedented clarity.</p>
                 <div className="grid grid-cols-2 gap-6">
@@ -126,7 +127,7 @@ const Product: React.FC = () => {
               <div className="space-y-8">
                 <div className="flex gap-6">
                   <div className="w-12 h-12 flex-shrink-0 bg-white/5 border border-white/10 flex items-center justify-center rounded-xl">
-                    <span className="material-symbols-outlined text-blue-400">fingerprint</span>
+                    <Fingerprint className="w-6 h-6 text-blue-400" />
                   </div>
                   <div>
                     <h4 className="font-bold text-xl mb-1">Biometric Authentication</h4>
@@ -135,7 +136,7 @@ const Product: React.FC = () => {
                 </div>
                 <div className="flex gap-6">
                   <div className="w-12 h-12 flex-shrink-0 bg-white/5 border border-white/10 flex items-center justify-center rounded-xl">
-                    <span className="material-symbols-outlined text-blue-400">encrypted</span>
+                    <Lock className="w-6 h-6 text-blue-400" />
                   </div>
                   <div>
                     <h4 className="font-bold text-xl mb-1">256-bit AES Encryption</h4>
@@ -144,7 +145,7 @@ const Product: React.FC = () => {
                 </div>
                 <div className="flex gap-6">
                   <div className="w-12 h-12 flex-shrink-0 bg-white/5 border border-white/10 flex items-center justify-center rounded-xl">
-                    <span className="material-symbols-outlined text-blue-400">cloud_done</span>
+                    <Cloud className="w-6 h-6 text-blue-400" />
                   </div>
                   <div>
                     <h4 className="font-bold text-xl mb-1">Immutable Logs</h4>

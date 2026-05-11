@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { CheckCircle2, XCircle, ChevronDown } from "lucide-react";
 
 const Pricing: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -98,36 +99,19 @@ const Pricing: React.FC = () => {
           </div>
           <ul className="space-y-4 mb-10 flex-grow">
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Up to 50 Units</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Digital Visitor Log</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">QR Code Entry</span>
             </li>
             <li className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-slate-300 text-lg">
-                cancel
-              </span>
+              <XCircle className="w-5 h-5 text-slate-300" />
               <span className="font-body-md text-slate-400">
                 Security AI Analytics
               </span>
@@ -157,48 +141,23 @@ const Pricing: React.FC = () => {
           </div>
           <ul className="space-y-4 mb-10 flex-grow">
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Up to 250 Units</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Automated Guest Invites</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Vehicle Plate Recognition</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Resident Mobile App</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary" />
               <span className="font-body-md">Custom Branding</span>
             </li>
           </ul>
@@ -221,39 +180,19 @@ const Pricing: React.FC = () => {
           </div>
           <ul className="space-y-4 mb-10 flex-grow">
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary-fixed text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary-fixed" />
               <span className="font-body-md">Unlimited Units</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary-fixed text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary-fixed" />
               <span className="font-body-md">Biometric Integration</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary-fixed text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary-fixed" />
               <span className="font-body-md">24/7 Priority Support</span>
             </li>
             <li className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary-fixed text-lg"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
+              <CheckCircle2 className="w-5 h-5 text-secondary-fixed" />
               <span className="font-body-md">Dedicated Success Manager</span>
             </li>
           </ul>
@@ -306,19 +245,13 @@ const Pricing: React.FC = () => {
                   Visitor Pass (QR)
                 </td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
               </tr>
               <tr>
@@ -327,14 +260,10 @@ const Pricing: React.FC = () => {
                 </td>
                 <td className="p-8 text-center">—</td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
               </tr>
               <tr>
@@ -342,9 +271,7 @@ const Pricing: React.FC = () => {
                 <td className="p-8 text-center">—</td>
                 <td className="p-8 text-center">—</td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
               </tr>
               <tr>
@@ -353,14 +280,10 @@ const Pricing: React.FC = () => {
                 </td>
                 <td className="p-8 text-center">—</td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
                 <td className="p-8 text-center">
-                  <span className="material-symbols-outlined text-secondary">
-                    check
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary inline-block" />
                 </td>
               </tr>
               <tr>
@@ -401,11 +324,9 @@ const Pricing: React.FC = () => {
                   <span className="font-semibold text-lg text-primary">
                     {faq.q}
                   </span>
-                  <span
-                    className={`material-symbols-outlined text-slate-400 transition-transform duration-300 ${activeIndex === index ? "rotate-180" : ""}`}
-                  >
-                    expand_more
-                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${activeIndex === index ? "rotate-180" : ""}`}
+                  />
                 </button>
 
                 {/* Conditional Rendering: Only show if activeIndex matches */}

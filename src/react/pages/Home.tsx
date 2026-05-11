@@ -1,4 +1,5 @@
 import React from "react";
+import { ArrowRight, CheckCircle2, Package, Users, User, Fingerprint, Landmark, Truck, Headphones, CalendarDays, MessageSquare, Lock, Eye, ShieldCheck, Star, Verified, QrCode, Building2 } from "lucide-react";
 
 const Home: React.FC = () => {
   return (
@@ -21,18 +22,11 @@ const Home: React.FC = () => {
             <div className="flex flex-wrap gap-4 mb-12">
               <button className="px-8 py-4 bg-secondary text-white font-medium rounded-[10px] flex items-center gap-2 hover:brightness-110 transition-all">
                 Book a Demo{" "}
-                <span className="material-symbols-outlined text-sm">
-                  arrow_forward
-                </span>
+                <ArrowRight className="w-5 h-5" />
               </button>
               <button className="px-8 py-4 border-1.5 border-white/20 bg-white/5 text-white font-medium rounded-[10px] hover:bg-white/10 transition-all">
                 Download App
               </button>
-            </div>
-            <div className="flex items-center gap-8 pt-8 border-t border-white/10">
-              <div className="text-white/60 text-sm">
-                Trusted by 1,000+ top gated communities
-              </div>
             </div>
             <div className="hero-trust">
               <div className="hero-trust-avatars">
@@ -68,12 +62,7 @@ const Home: React.FC = () => {
               <div className="absolute -left-12 top-20 glass-card p-4 rounded-xl shadow-2xl max-w-[200px]">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
-                    <span
-                      className="material-symbols-outlined text-secondary"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      check_circle
-                    </span>
+                    <CheckCircle2 className="w-6 h-6 text-secondary" />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-white">
@@ -88,12 +77,7 @@ const Home: React.FC = () => {
               <div className="absolute -right-12 bottom-32 glass-card p-4 rounded-xl shadow-2xl max-w-[200px]">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
-                    <span
-                      className="material-symbols-outlined text-secondary"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      package_2
-                    </span>
+                    <Package className="w-6 h-6 text-secondary" />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-white">
@@ -165,62 +149,20 @@ const Home: React.FC = () => {
             Trusted by societies in cities across India
           </div>
           <div className="logos-track" id="logos-track">
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Greenwood Heights · Navi
-              Mumbai
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Sunrise Valley · Pune
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Park View Residency ·
-              Bengaluru
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Blue Bell Towers ·
-              Kolkata
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Silver Oak Enclave ·
-              Gurgaon
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Lotus Garden · Ahmedabad
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Royal Palms · Mumbai
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Palm Heights · Chennai
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Greenwood Heights · Navi
-              Mumbai
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Sunrise Valley · Pune
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Park View Residency ·
-              Bengaluru
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Blue Bell Towers ·
-              Kolkata
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Silver Oak Enclave ·
-              Gurgaon
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Lotus Garden · Ahmedabad
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Royal Palms · Mumbai
-            </span>
-            <span className="logo-item">
-              <span className="material-symbols-outlined text-base" style={{color:'#666'}}>apartment</span> Palm Heights · Chennai
-            </span>
+            {[
+              { name: 'Greenwood Heights', city: 'Navi Mumbai' },
+              { name: 'Sunrise Valley', city: 'Pune' },
+              { name: 'Park View Residency', city: 'Bengaluru' },
+              { name: 'Blue Bell Towers', city: 'Kolkata' },
+              { name: 'Silver Oak Enclave', city: 'Gurgaon' },
+              { name: 'Lotus Garden', city: 'Ahmedabad' },
+              { name: 'Royal Palms', city: 'Mumbai' },
+              { name: 'Palm Heights', city: 'Chennai' },
+            ].map((society, index) => (
+              <span key={index} className="logo-item">
+                <Building2 className="w-4 h-4 inline-block" style={{color:'#666'}} /> {society.name} · {society.city}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -239,9 +181,7 @@ const Home: React.FC = () => {
           <div className="grid lg:grid-cols-12 gap-gutter items-stretch">
             <div className="lg:col-span-7 bg-surface-container-low rounded-xl p-10 flex flex-col justify-between group hover:shadow-ambient transition-all border border-transparent hover:border-secondary/10">
               <div className="max-w-md">
-                <span className="material-symbols-outlined text-4xl text-secondary mb-6">
-                  groups
-                </span>
+                <Users className="w-10 h-10 text-secondary mb-6" />
                 <h3 className="font-h2 text-3xl mb-4">For RWA Committees</h3>
                 <p className="text-on-surface-variant mb-8 font-body-md">
                   Streamline accounting, resolve helpdesk tickets faster, and
@@ -249,21 +189,15 @@ const Home: React.FC = () => {
                 </p>
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-secondary text-sm">
-                      check_circle
-                    </span>{" "}
+                    <CheckCircle2 className="w-5 h-5 text-secondary" />{" "}
                     Automated Dues Collection
                   </li>
                   <li className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-secondary text-sm">
-                      check_circle
-                    </span>{" "}
+                    <CheckCircle2 className="w-5 h-5 text-secondary" />{" "}
                     Facility Management & Booking
                   </li>
                   <li className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-secondary text-sm">
-                      check_circle
-                    </span>{" "}
+                    <CheckCircle2 className="w-5 h-5 text-secondary" />{" "}
                     Verified Vendor Management
                   </li>
                 </ul>
@@ -278,9 +212,7 @@ const Home: React.FC = () => {
             </div>
             <div className="lg:col-span-5 bg-primary-container text-white rounded-xl p-10 flex flex-col justify-between group hover:shadow-2xl transition-all">
               <div>
-                <span className="material-symbols-outlined text-4xl text-secondary mb-6">
-                  person
-                </span>
+                <User className="w-10 h-10 text-secondary mb-6" />
                 <h3 className="font-h2 text-3xl mb-4">For Residents</h3>
                 <p className="text-primary-fixed-dim mb-8 font-body-md">
                   Your one-stop app for security, convenience, and community
@@ -288,21 +220,15 @@ const Home: React.FC = () => {
                 </p>
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-secondary text-sm">
-                      check_circle
-                    </span>{" "}
+                    <CheckCircle2 className="w-5 h-5 text-secondary" />{" "}
                     One-click Guest Approval
                   </li>
                   <li className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-secondary text-sm">
-                      check_circle
-                    </span>{" "}
+                    <CheckCircle2 className="w-5 h-5 text-secondary" />{" "}
                     Delivery Pre-approvals
                   </li>
                   <li className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-secondary text-sm">
-                      check_circle
-                    </span>{" "}
+                    <CheckCircle2 className="w-5 h-5 text-secondary" />{" "}
                     Daily Help Attendance
                   </li>
                 </ul>
@@ -333,9 +259,7 @@ const Home: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
             <div className="md:col-span-4 md:row-span-2 bg-white rounded-xl p-8 border border-surface-variant shadow-sm hover:shadow-ambient transition-all group overflow-hidden">
-              <span className="material-symbols-outlined text-secondary mb-4 text-3xl">
-                fingerprint
-              </span>
+              <Fingerprint className="w-9 h-9 text-secondary mb-4" />
               <h4 className="font-h2 text-2xl mb-2">Visitor Management</h4>
               <p className="text-on-surface-variant mb-6">
                 Real-time alerts, digital logs, and AI-powered visitor
@@ -350,45 +274,35 @@ const Home: React.FC = () => {
               </div>
             </div>
             <div className="md:col-span-2 bg-white rounded-xl p-8 border border-surface-variant shadow-sm hover:shadow-ambient transition-all group">
-              <span className="material-symbols-outlined text-secondary mb-4 text-3xl">
-                account_balance
-              </span>
+              <Landmark className="w-9 h-9 text-secondary mb-4" />
               <h4 className="font-h2 text-2xl mb-2">Smart Accounting</h4>
               <p className="text-on-surface-variant">
                 Automated billing, invoicing and GST-ready reports.
               </p>
             </div>
             <div className="md:col-span-2 bg-white rounded-xl p-8 border border-surface-variant shadow-sm hover:shadow-ambient transition-all group">
-              <span className="material-symbols-outlined text-secondary mb-4 text-3xl">
-                local_shipping
-              </span>
+              <Truck className="w-9 h-9 text-secondary mb-4" />
               <h4 className="font-h2 text-2xl mb-2">Delivery</h4>
               <p className="text-on-surface-variant">
                 Package management and e-commerce verification.
               </p>
             </div>
             <div className="md:col-span-2 bg-white rounded-xl p-8 border border-surface-variant shadow-sm hover:shadow-ambient transition-all group">
-              <span className="material-symbols-outlined text-secondary mb-4 text-3xl">
-                support_agent
-              </span>
+              <Headphones className="w-9 h-9 text-secondary mb-4" />
               <h4 className="font-h2 text-2xl mb-2">Helpdesk</h4>
               <p className="text-on-surface-variant">
                 Instant complaint tracking and service reminders.
               </p>
             </div>
             <div className="md:col-span-2 bg-white rounded-xl p-8 border border-surface-variant shadow-sm hover:shadow-ambient transition-all group">
-              <span className="material-symbols-outlined text-secondary mb-4 text-3xl">
-                calendar_month
-              </span>
+              <CalendarDays className="w-9 h-9 text-secondary mb-4" />
               <h4 className="font-h2 text-2xl mb-2">Facility Booking</h4>
               <p className="text-on-surface-variant">
                 Clubhouse, tennis court, and party hall scheduling.
               </p>
             </div>
             <div className="md:col-span-2 bg-white rounded-xl p-8 border border-surface-variant shadow-sm hover:shadow-ambient transition-all group">
-              <span className="material-symbols-outlined text-secondary mb-4 text-3xl">
-                forum
-              </span>
+              <MessageSquare className="w-9 h-9 text-secondary mb-4" />
               <h4 className="font-h2 text-2xl mb-2">Community Feed</h4>
               <p className="text-on-surface-variant">
                 Notice boards, discussions, and neighborhood polls.
@@ -411,12 +325,7 @@ const Home: React.FC = () => {
             <div className="space-y-8">
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                  <span
-                    className="material-symbols-outlined text-secondary"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    lock
-                  </span>
+                  <Lock className="w-6 h-6 text-secondary" />
                 </div>
                 <div>
                   <h4 className="font-h2 text-xl text-white mb-2">
@@ -430,12 +339,7 @@ const Home: React.FC = () => {
               </div>
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                  <span
-                    className="material-symbols-outlined text-secondary"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    visibility
-                  </span>
+                  <Eye className="w-6 h-6 text-secondary" />
                 </div>
                 <div>
                   <h4 className="font-h2 text-xl text-white mb-2">
@@ -449,12 +353,7 @@ const Home: React.FC = () => {
               </div>
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                  <span
-                    className="material-symbols-outlined text-secondary"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    verified_user
-                  </span>
+                  <ShieldCheck className="w-6 h-6 text-secondary" />
                 </div>
                 <div>
                   <h4 className="font-h2 text-xl text-white mb-2">
@@ -533,13 +432,10 @@ const Home: React.FC = () => {
             <div className="bg-surface rounded-xl p-8 shadow-sm hover:shadow-ambient transition-all border border-transparent hover:border-secondary/10">
               <div className="flex gap-1 text-secondary mb-6">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <span
+                  <Star
                     key={star}
-                    className="material-symbols-outlined text-sm"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    star
-                  </span>
+                    className="w-5 h-5 fill-current"
+                  />
                 ))}
               </div>
               <p className="font-body-md text-primary mb-8 italic">
@@ -564,13 +460,10 @@ const Home: React.FC = () => {
             <div className="bg-surface rounded-xl p-8 shadow-sm hover:shadow-ambient transition-all border border-transparent hover:border-secondary/10">
               <div className="flex gap-1 text-secondary mb-6">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <span
+                  <Star
                     key={star}
-                    className="material-symbols-outlined text-sm"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    star
-                  </span>
+                    className="w-5 h-5 fill-current"
+                  />
                 ))}
               </div>
               <p className="font-body-md text-primary mb-8 italic">
@@ -595,13 +488,10 @@ const Home: React.FC = () => {
             <div className="bg-surface rounded-xl p-8 shadow-sm hover:shadow-ambient transition-all border border-transparent hover:border-secondary/10">
               <div className="flex gap-1 text-secondary mb-6">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <span
+                  <Star
                     key={star}
-                    className="material-symbols-outlined text-sm"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    star
-                  </span>
+                    className="w-5 h-5 fill-current"
+                  />
                 ))}
               </div>
               <p className="font-body-md text-primary mb-8 italic">
@@ -648,21 +538,11 @@ const Home: React.FC = () => {
             </p>
             <div className="grid grid-cols-2 gap-6">
               <div className="flex items-center gap-3">
-                <span
-                  className="material-symbols-outlined text-secondary"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  verified
-                </span>
+                <Verified className="w-6 h-6 text-secondary" />
                 <span className="text-white text-sm">ISO Certified</span>
               </div>
               <div className="flex items-center gap-3">
-                <span
-                  className="material-symbols-outlined text-secondary"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  verified
-                </span>
+                <Verified className="w-6 h-6 text-secondary" />
                 <span className="text-white text-sm">24/7 Support</span>
               </div>
             </div>
@@ -735,9 +615,7 @@ const Home: React.FC = () => {
             <div className="flex items-center gap-6">
               <div className="p-4 bg-white rounded-xl">
                 <div className="w-24 h-24 bg-gray-100 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-4xl text-primary">
-                    qr_code_2
-                  </span>
+                  <QrCode className="w-12 h-12 text-primary" />
                 </div>
               </div>
               <p className="text-sm">

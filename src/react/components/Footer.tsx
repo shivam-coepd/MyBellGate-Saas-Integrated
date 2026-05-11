@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { Globe, Mail } from "lucide-react";
 // @ts-ignore - Image import
 import logo from "../assets/mygatebell_logo.png";
 
@@ -9,7 +10,6 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-8 py-16 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 font-['Plus_Jakarta_Sans'] text-sm leading-relaxed">
         <div className="col-span-2 lg:col-span-2">
           <div className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-            {/* <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span> */}
             <img
               src={logo}
               alt="MyGateBell Logo"
@@ -26,15 +26,13 @@ const Footer: React.FC = () => {
               className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center hover:bg-secondary hover:text-white transition-all"
               href="#"
             >
-              <span className="material-symbols-outlined text-lg">public</span>
+              <Globe className="w-5 h-5" />
             </a>
             <a
               className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center hover:bg-secondary hover:text-white transition-all"
               href="#"
             >
-              <span className="material-symbols-outlined text-lg">
-                alternate_email
-              </span>
+              <Mail className="w-5 h-5" />
             </a>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Shield, Users } from 'lucide-react';
 
 const About: React.FC = () => {
   return (
@@ -97,12 +98,12 @@ const About: React.FC = () => {
               </div>
             </div>
             <div className="bg-primary-container p-10 rounded-3xl text-white flex flex-col justify-center">
-              <span className="material-symbols-outlined text-4xl text-blue-400 mb-6">shield_lock</span>
+              <Shield className="w-10 h-10 text-blue-400 mb-6" />
               <h4 className="font-h2 text-2xl mb-4">Uncompromising Privacy</h4>
               <p className="text-on-primary-container font-body-md">Your data belongs to you. We employ bank-grade encryption and strict data sovereignty policies to ensure resident information is never sold or misused.</p>
             </div>
             <div className="bg-secondary-container p-10 rounded-3xl text-white flex flex-col justify-center">
-              <span className="material-symbols-outlined text-4xl text-white mb-6">diversity_3</span>
+              <Users className="w-10 h-10 text-white mb-6" />
               <h4 className="font-h2 text-2xl mb-4">Community Growth</h4>
               <p className="text-white/80 font-body-md">We reinvest into the communities we serve through safety workshops, local guard training programs, and neighborhood connectivity initiatives.</p>
             </div>

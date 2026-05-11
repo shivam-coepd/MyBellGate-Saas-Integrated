@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 // @ts-ignore - Image import
 import logo from "../assets/mygatebell_logo.png";
 import ScrollProgress from "./ScrollProgress";
@@ -69,9 +70,7 @@ const Navbar: React.FC = () => {
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
-            <span className="material-symbols-outlined">
-              {mobileOpen ? "close" : "menu"}
-            </span>
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>

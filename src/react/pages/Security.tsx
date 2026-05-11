@@ -1,4 +1,5 @@
 import React from 'react';
+import { Shield, Key, Network, EyeOff, CheckCircle2, Verified, Lock, ShieldCheck } from 'lucide-react';
 
 const Security: React.FC = () => {
   return (
@@ -8,7 +9,7 @@ const Security: React.FC = () => {
         <div className="max-w-[1200px] mx-auto px-8 relative z-10">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-400/20 rounded-full mb-6">
-              <span className="material-symbols-outlined text-[16px] text-blue-400">verified_user</span>
+              <Shield className="w-4 h-4 text-blue-400" />
               <span className="text-label-caps text-blue-400">SECURE BY DESIGN</span>
             </div>
             <h1 className="font-h1 text-h1 mb-8">The Gold Standard of Community Trust.</h1>
@@ -24,7 +25,7 @@ const Security: React.FC = () => {
         </div>
         {/* Decorative Shield Element */}
         <div className="absolute right-[-10%] top-[20%] opacity-10 pointer-events-none hidden lg:block">
-          <span className="material-symbols-outlined text-[600px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
+          <Shield className="w-[600px] h-[600px]" />
         </div>
       </section>
 
@@ -34,21 +35,21 @@ const Security: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white p-10 rounded-xl ambient-shadow border border-slate-100">
               <div className="w-14 h-14 bg-secondary/5 rounded-xl flex items-center justify-center mb-8">
-                <span className="material-symbols-outlined text-secondary text-3xl">key</span>
+                <Key className="w-7 h-7 text-secondary" />
               </div>
               <h3 className="font-h2 text-[24px] mb-4">End-to-End Encryption</h3>
               <p className="font-body-md text-on-surface-variant">Every byte of data—from visitor logs to resident profiles—is encrypted using AES-256 standards both in transit and at rest.</p>
             </div>
             <div className="bg-white p-10 rounded-xl ambient-shadow border border-slate-100">
               <div className="w-14 h-14 bg-secondary/5 rounded-xl flex items-center justify-center mb-8">
-                <span className="material-symbols-outlined text-secondary text-3xl">hub</span>
+                <Network className="w-7 h-7 text-secondary" />
               </div>
               <h3 className="font-h2 text-[24px] mb-4">Zero-Trust Architecture</h3>
               <p className="font-body-md text-on-surface-variant">We operate on a 'never trust, always verify' model. Multi-factor authentication is mandatory for all administrative access points.</p>
             </div>
             <div className="bg-white p-10 rounded-xl ambient-shadow border border-slate-100">
               <div className="w-14 h-14 bg-secondary/5 rounded-xl flex items-center justify-center mb-8">
-                <span className="material-symbols-outlined text-secondary text-3xl">visibility_off</span>
+                <EyeOff className="w-7 h-7 text-secondary" />
               </div>
               <h3 className="font-h2 text-[24px] mb-4">Privacy by Default</h3>
               <p className="font-body-md text-on-surface-variant">Data is anonymized wherever possible. MyGateBell never sells your community's data; we are providers, not brokers.</p>
@@ -66,7 +67,7 @@ const Security: React.FC = () => {
             <div className="space-y-8">
               <div className="flex gap-4">
                 <div className="mt-1 flex-shrink-0">
-                  <span className="material-symbols-outlined text-secondary">check_circle</span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary" />
                 </div>
                 <div>
                   <h4 className="font-bold text-lg mb-1">99.99% Uptime SLA</h4>
@@ -75,7 +76,7 @@ const Security: React.FC = () => {
               </div>
               <div className="flex gap-4">
                 <div className="mt-1 flex-shrink-0">
-                  <span className="material-symbols-outlined text-secondary">check_circle</span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary" />
                 </div>
                 <div>
                   <h4 className="font-bold text-lg mb-1">Real-time Threat Monitoring</h4>
@@ -84,7 +85,7 @@ const Security: React.FC = () => {
               </div>
               <div className="flex gap-4">
                 <div className="mt-1 flex-shrink-0">
-                  <span className="material-symbols-outlined text-secondary">check_circle</span>
+                  <CheckCircle2 className="w-5 h-5 text-secondary" />
                 </div>
                 <div>
                   <h4 className="font-bold text-lg mb-1">Continuous Penetration Testing</h4>
@@ -115,21 +116,21 @@ const Security: React.FC = () => {
               <p className="text-slate-400">The international standard for information security management systems (ISMS). We are audited annually to ensure compliance.</p>
             </div>
             <div className="mt-12 flex justify-end">
-              <span className="material-symbols-outlined text-blue-400 text-5xl opacity-50">verified</span>
+              <Verified className="w-12 h-12 text-blue-400 opacity-50" />
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-8 rounded-2xl">
-            <span className="material-symbols-outlined text-blue-400 text-3xl mb-6">gpp_good</span>
+            <ShieldCheck className="w-8 h-8 text-blue-400 mb-6" />
             <h4 className="font-bold text-xl mb-2">GDPR</h4>
             <p className="text-sm text-slate-400">Comprehensive data protection and privacy rights for all users globally.</p>
           </div>
           <div className="bg-white/5 border border-white/10 p-8 rounded-2xl">
-            <span className="material-symbols-outlined text-blue-400 text-3xl mb-6">lock_reset</span>
+            <Lock className="w-8 h-8 text-blue-400 mb-6" />
             <h4 className="font-bold text-xl mb-2">CCPA</h4>
             <p className="text-sm text-slate-400">Strict adherence to California Consumer Privacy Act standards and regulations.</p>
           </div>
           <div className="bg-white/5 border border-white/10 p-8 rounded-2xl">
-            <span className="material-symbols-outlined text-blue-400 text-3xl mb-6">security</span>
+            <Verified className="w-8 h-8 text-blue-400 mb-6" />
             <h4 className="font-bold text-xl mb-2">SOC2</h4>
             <p className="text-sm text-slate-400">Independent verification of our security controls and operational effectiveness.</p>
           </div>

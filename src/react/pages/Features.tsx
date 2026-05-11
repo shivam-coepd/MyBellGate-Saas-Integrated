@@ -1,4 +1,5 @@
 import React from 'react';
+import { QrCode, ShieldCheck, History, CreditCard, CheckCircle2, MessageSquare, CalendarCheck } from 'lucide-react';
 
 const Features: React.FC = () => {
   return (
@@ -19,17 +20,17 @@ const Features: React.FC = () => {
           <div className="md:col-span-8 bg-white rounded-[16px] ambient-shadow p-10 overflow-hidden relative group">
             <div className="relative z-10 flex flex-col h-full">
               <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mb-6 text-secondary">
-                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>qr_code_2</span>
+                <QrCode className="w-7 h-7" />
               </div>
               <h3 className="font-h2 text-[32px] text-primary mb-4">Visitor Management</h3>
               <p className="font-body-md text-on-surface-variant max-w-md mb-8">Secure pre-approvals and lightning-fast QR entries. Transform the gate experience with a system that prioritizes both security and hospitality.</p>
               <div className="mt-auto grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 bg-background p-4 rounded-xl border border-surface-variant/30">
-                  <span className="material-symbols-outlined text-secondary">verified_user</span>
+                  <ShieldCheck className="w-5 h-5 text-secondary" />
                   <span className="font-semibold text-sm">Instant Verification</span>
                 </div>
                 <div className="flex items-center gap-3 bg-background p-4 rounded-xl border border-surface-variant/30">
-                  <span className="material-symbols-outlined text-secondary">history</span>
+                  <History className="w-5 h-5 text-secondary" />
                   <span className="font-semibold text-sm">Digital Logs</span>
                 </div>
               </div>
@@ -41,21 +42,21 @@ const Features: React.FC = () => {
           <div className="md:col-span-4 bg-primary-container rounded-[16px] p-10 text-white flex flex-col relative overflow-hidden">
             <div className="relative z-10">
               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-secondary-fixed">payments</span>
+                <CreditCard className="w-6 h-6 text-secondary-fixed" />
               </div>
               <h3 className="font-h2 text-2xl mb-4 text-white">Smart Accounting</h3>
               <p className="font-body-md text-on-primary-container mb-8">Automated GST billing, payment reminders, and real-time ledger tracking for seamless society finances.</p>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3 text-sm">
-                  <span className="material-symbols-outlined text-secondary-fixed text-sm">check_circle</span>
+                  <CheckCircle2 className="w-4 h-4 text-secondary-fixed" />
                   Auto-generated Invoices
                 </li>
                 <li className="flex items-center gap-3 text-sm">
-                  <span className="material-symbols-outlined text-secondary-fixed text-sm">check_circle</span>
+                  <CheckCircle2 className="w-4 h-4 text-secondary-fixed" />
                   Multiple Payment Modes
                 </li>
                 <li className="flex items-center gap-3 text-sm">
-                  <span className="material-symbols-outlined text-secondary-fixed text-sm">check_circle</span>
+                  <CheckCircle2 className="w-4 h-4 text-secondary-fixed" />
                   Tally Integration
                 </li>
               </ul>
@@ -70,7 +71,7 @@ const Features: React.FC = () => {
           {/* Community Feed */}
           <div className="md:col-span-4 bg-white rounded-[16px] ambient-shadow p-10">
             <div className="w-12 h-12 bg-tertiary-fixed/30 rounded-xl flex items-center justify-center mb-6 text-on-tertiary-fixed-variant">
-              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>forum</span>
+              <MessageSquare className="w-7 h-7" />
             </div>
             <h3 className="font-h2 text-2xl text-primary mb-4">Community Feed</h3>
             <p className="font-body-md text-on-surface-variant text-sm">Foster a vibrant neighborhood with digital notices, polls, and classifieds in a private, secure environment.</p>
@@ -80,7 +81,7 @@ const Features: React.FC = () => {
           <div className="md:col-span-8 bg-surface-container-low rounded-[16px] p-10 flex flex-col md:flex-row gap-8 items-center overflow-hidden">
             <div className="flex-1">
               <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mb-6 text-secondary">
-                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>event_available</span>
+                <CalendarCheck className="w-7 h-7" />
               </div>
               <h3 className="font-h2 text-[32px] text-primary mb-4">Facility Booking</h3>
               <p className="font-body-md text-on-surface-variant mb-6">Manage common areas, clubhouses, and sports courts with an intelligent slots system and rule-based priority.</p>
