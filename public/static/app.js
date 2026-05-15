@@ -3,14 +3,14 @@
    Complete Frontend Application
    ============================================ */
 
-console.log('app.js starting...');
-'use strict';
+console.log("app.js starting...");
+("use strict");
 
 // ============ STATE MANAGEMENT ============
 const State = {
   user: null,
   token: null,
-  currentPage: 'dashboard',
+  currentPage: "dashboard",
   data: {
     dashStats: null,
     residents: [],
@@ -18,22 +18,22 @@ const State = {
     visitors: [],
     complaints: [],
     notices: [],
-    bills: []
+    bills: [],
   },
   charts: {},
-  modals: {}
+  modals: {},
 };
 
 // ============ API CLIENT ============
 const API = {
-  base: '/api',
+  base: "/api",
   async request(method, endpoint, body = null) {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { "Content-Type": "application/json" };
     if (State.token) {
-      headers['Authorization'] = `Bearer ${State.token}`;
-      console.log('🔑 Using token:', State.token.substring(0, 20) + '...');
+      headers["Authorization"] = `Bearer ${State.token}`;
+      console.log("🔑 Using token:", State.token.substring(0, 20) + "...");
     } else {
-      console.warn('⚠️ No token available for request:', endpoint);
+      console.warn("⚠️ No token available for request:", endpoint);
     }
     const opts = { method, headers };
     if (body) opts.body = JSON.stringify(body);
@@ -41,34 +41,36 @@ const API = {
       console.log(`📡 API ${method} ${this.base}${endpoint}`);
       const res = await fetch(`${this.base}${endpoint}`, opts);
       const json = await res.json();
-      
+
       if (!res.ok || json.status === false) {
         if (res.status === 404) {
-          throw new Error(`Endpoint not found (404): ${endpoint}. This feature might not be deployed to the production backend yet.`);
+          throw new Error(
+            `Endpoint not found (404): ${endpoint}. This feature might not be deployed to the production backend yet.`,
+          );
         }
         if (res.status === 401) {
-          throw new Error('Authorization failed. Please login again.');
+          throw new Error("Authorization failed. Please login again.");
         }
-        const errMsg = json.message || json.error || 'Request failed';
+        const errMsg = json.message || json.error || "Request failed";
         throw new Error(errMsg);
       }
-      
+
       // If backend uses standard wrapper {status:true, data: ...}, return data
-      if (json.hasOwnProperty('data') && json.status === true) {
+      if (json.hasOwnProperty("data") && json.status === true) {
         return json.data;
       }
-      if (json.status === true && !json.hasOwnProperty('data')) {
-        console.warn('API returned success but no data field:', json);
+      if (json.status === true && !json.hasOwnProperty("data")) {
+        console.warn("API returned success but no data field:", json);
       }
       return json;
     } catch (err) {
       throw err;
     }
   },
-  get: (ep) => API.request('GET', ep),
-  post: (ep, body) => API.request('POST', ep, body),
-  put: (ep, body) => API.request('PUT', ep, body),
-  delete: (ep) => API.request('DELETE', ep),
+  get: (ep) => API.request("GET", ep),
+  post: (ep, body) => API.request("POST", ep, body),
+  put: (ep, body) => API.request("PUT", ep, body),
+  delete: (ep) => API.request("DELETE", ep),
 };
 
 // ============ UTILITIES ============
@@ -83,92 +85,141 @@ function timeAgo(dateStr) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function formatTime(dateStr) {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function formatDateTime(dateStr) {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function formatCurrency(amount) {
-  return '₹' + Number(amount).toLocaleString('en-IN');
+  return "₹" + Number(amount).toLocaleString("en-IN");
 }
 
 function initials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 }
 
 function categoryIcon(cat) {
-  const icons = { plumbing: 'fa-droplet', electrical: 'fa-bolt', security: 'fa-shield-halved', cleaning: 'fa-broom', parking: 'fa-car', lift: 'fa-elevator', other: 'fa-circle-question', general: 'fa-bullhorn', maintenance: 'fa-wrench', emergency: 'fa-triangle-exclamation', event: 'fa-calendar-star', finance: 'fa-indian-rupee-sign' };
-  return icons[cat] || 'fa-circle';
+  const icons = {
+    plumbing: "fa-droplet",
+    electrical: "fa-bolt",
+    security: "fa-shield-halved",
+    cleaning: "fa-broom",
+    parking: "fa-car",
+    lift: "fa-elevator",
+    other: "fa-circle-question",
+    general: "fa-bullhorn",
+    maintenance: "fa-wrench",
+    emergency: "fa-triangle-exclamation",
+    event: "fa-calendar-star",
+    finance: "fa-indian-rupee-sign",
+  };
+  return icons[cat] || "fa-circle";
 }
 
 function statusBadge(status) {
-  return `<span class="badge badge-${status}"><span class="badge-dot"></span>${status.replace('_', ' ')}</span>`;
+  return `<span class="badge badge-${status}"><span class="badge-dot"></span>${status.replace("_", " ")}</span>`;
 }
 
 function priorityBadge(priority) {
-  const map = { high: '🔴 High', medium: '🟡 Medium', low: '🟢 Low' };
-  return `<span class="badge badge-${priority === 'high' ? 'rejected' : priority === 'medium' ? 'pending' : 'approved'}">${map[priority]}</span>`;
+  const map = { high: "🔴 High", medium: "🟡 Medium", low: "🟢 Low" };
+  return `<span class="badge badge-${priority === "high" ? "rejected" : priority === "medium" ? "pending" : "approved"}">${map[priority]}</span>`;
 }
 
-function el(id) { return document.getElementById(id); }
-function qs(sel) { return document.querySelector(sel); }
-function qsa(sel) { return document.querySelectorAll(sel); }
+function el(id) {
+  return document.getElementById(id);
+}
+function qs(sel) {
+  return document.querySelector(sel);
+}
+function qsa(sel) {
+  return document.querySelectorAll(sel);
+}
 
 // ============ TOAST NOTIFICATIONS ============
 const Toast = {
   show(type, title, message, duration = 4000) {
-    const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
-    const container = el('toast-container');
-    const toast = document.createElement('div');
+    const icons = {
+      success: "fa-circle-check",
+      error: "fa-circle-xmark",
+      warning: "fa-triangle-exclamation",
+      info: "fa-circle-info",
+    };
+    const container = el("toast-container");
+    const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
       <i class="fa-solid ${icons[type]} toast-icon"></i>
       <div class="toast-content">
         <div class="toast-title">${title}</div>
-        ${message ? `<div class="toast-message">${message}</div>` : ''}
+        ${message ? `<div class="toast-message">${message}</div>` : ""}
       </div>`;
     container.appendChild(toast);
     setTimeout(() => {
-      toast.classList.add('removing');
+      toast.classList.add("removing");
       setTimeout(() => toast.remove(), 300);
     }, duration);
   },
-  success: (title, msg) => Toast.show('success', title, msg),
-  error: (title, msg) => Toast.show('error', title, msg),
-  warning: (title, msg) => Toast.show('warning', title, msg),
-  info: (title, msg) => Toast.show('info', title, msg),
+  success: (title, msg) => Toast.show("success", title, msg),
+  error: (title, msg) => Toast.show("error", title, msg),
+  warning: (title, msg) => Toast.show("warning", title, msg),
+  info: (title, msg) => Toast.show("info", title, msg),
 };
 
 // ============ MODAL SYSTEM ============
 const Modal = {
   open(id) {
     const overlay = el(id);
-    if (overlay) { overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+    if (overlay) {
+      overlay.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
   },
   close(id) {
     const overlay = el(id);
-    if (overlay) { overlay.classList.remove('open'); document.body.style.overflow = ''; }
+    if (overlay) {
+      overlay.classList.remove("open");
+      document.body.style.overflow = "";
+    }
   },
   closeAll() {
-    qsa('.modal-overlay').forEach(m => m.classList.remove('open'));
-    document.body.style.overflow = '';
+    qsa(".modal-overlay").forEach((m) => m.classList.remove("open"));
+    document.body.style.overflow = "";
   },
   confirm(title, message, onConfirm) {
-    const existing = el('confirm-modal');
+    const existing = el("confirm-modal");
     if (existing) existing.remove();
-    const div = document.createElement('div');
-    div.id = 'confirm-modal';
-    div.className = 'modal-overlay';
+    const div = document.createElement("div");
+    div.id = "confirm-modal";
+    div.className = "modal-overlay";
     div.innerHTML = `
       <div class="modal modal-sm">
         <div class="modal-body" style="padding:28px">
@@ -184,46 +235,53 @@ const Modal = {
         </div>
       </div>`;
     document.body.appendChild(div);
-    setTimeout(() => div.classList.add('open'), 10);
-    el('confirm-ok-btn').onclick = () => { Modal.close('confirm-modal'); onConfirm(); };
-    div.addEventListener('click', e => { if (e.target === div) Modal.close('confirm-modal'); });
-  }
+    setTimeout(() => div.classList.add("open"), 10);
+    el("confirm-ok-btn").onclick = () => {
+      Modal.close("confirm-modal");
+      onConfirm();
+    };
+    div.addEventListener("click", (e) => {
+      if (e.target === div) Modal.close("confirm-modal");
+    });
+  },
 };
 
 // ============ AUTH ============
 async function doLogin(e) {
   e.preventDefault();
-  const phone = el('login-email').value.trim();
-  const password = el('login-password').value;
-  const btn = el('login-btn');
+  const phone = el("login-email").value.trim();
+  const password = el("login-password").value;
+  const btn = el("login-btn");
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
   try {
-    const data = await API.post('/auth/login', { phone, password });
+    const data = await API.post("/auth/login", { phone, password });
     State.token = data.token;
     State.user = data.user;
-    localStorage.setItem('gh_token', data.token);
-    localStorage.setItem('gh_user', JSON.stringify(data.user));
-    Toast.success('Welcome back!', `Signed in as ${data.user.name}`);
-    if (data.user.role === 'super_admin' || data.user.role === 'superadmin') renderSuperAdminApp();
+    localStorage.setItem("gh_token", data.token);
+    localStorage.setItem("gh_user", JSON.stringify(data.user));
+    Toast.success("Welcome back!", `Signed in as ${data.user.name}`);
+    if (data.user.role === "super_admin" || data.user.role === "superadmin")
+      renderSuperAdminApp();
     else renderApp();
   } catch (err) {
-    Toast.error('Login Failed', err.message);
+    Toast.error("Login Failed", err.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In';
+    btn.innerHTML =
+      '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In';
   }
 }
 
 function doLogout() {
   // Clear all stored data
-  localStorage.removeItem('gh_token');
-  localStorage.removeItem('gh_user');
-  
+  localStorage.removeItem("gh_token");
+  localStorage.removeItem("gh_user");
+
   // Clear state
   State.token = null;
   State.user = null;
   State.saPage = null;
-  State.currentPage = 'dashboard';
+  State.currentPage = "dashboard";
   State.data = {
     dashStats: null,
     residents: [],
@@ -231,20 +289,20 @@ function doLogout() {
     visitors: [],
     complaints: [],
     notices: [],
-    bills: []
+    bills: [],
   };
-  
+
   // Destroy all charts if they exist
   if (State.charts.visitor) State.charts.visitor.destroy();
   if (State.charts.complaint) State.charts.complaint.destroy();
   State.charts = {};
-  
+
   // Clear any cached data
   State.modals = {};
-  
+
   // Show toast notification
-  Toast.success('Signed Out', 'You have been logged out successfully');
-  
+  Toast.success("Signed Out", "You have been logged out successfully");
+
   // Render login page
   renderLogin();
 }
@@ -252,47 +310,65 @@ function doLogout() {
 function togglePasswordVisibility(inputId, toggleId) {
   const passwordInput = document.getElementById(inputId);
   const toggleIcon = document.getElementById(toggleId);
-  
+
   if (passwordInput && toggleIcon) {
-    if (passwordInput.type === 'password') {
-      passwordInput.type = 'text';
-      toggleIcon.classList.remove('fa-eye');
-      toggleIcon.classList.add('fa-eye-slash');
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      toggleIcon.classList.remove("fa-eye");
+      toggleIcon.classList.add("fa-eye-slash");
     } else {
-      passwordInput.type = 'password';
-      toggleIcon.classList.remove('fa-eye-slash');
-      toggleIcon.classList.add('fa-eye');
+      passwordInput.type = "password";
+      toggleIcon.classList.remove("fa-eye-slash");
+      toggleIcon.classList.add("fa-eye");
     }
   }
 }
 
 function setDemoCredentials(role) {
   const creds = {
-    superadmin: { phone: '1122334455', password: 'Pass@123' },
-    admin: { phone: '6677889900', password: 'Pass@123' },
-    resident: { phone: '8976351526', password: 'Pass@123' }
+    superadmin: { phone: "1122334455", password: "Pass@123" },
+    admin: { phone: "6677889900", password: "Pass@123" },
+    resident: { phone: "8976351526", password: "Pass@123" },
   };
   const c = creds[role];
-  if (c) { el('login-email').value = c.phone; el('login-password').value = c.password; }
-  qsa('.role-option').forEach(o => o.classList.toggle('active', o.dataset.role === role));
+  if (c) {
+    el("login-email").value = c.phone;
+    el("login-password").value = c.password;
+  }
+  qsa(".role-option").forEach((o) =>
+    o.classList.toggle("active", o.dataset.role === role),
+  );
   updateDemoHint(role);
 }
 
 function updateDemoHint(role) {
   const hints = {
-    superadmin: { phone: '1122334455', pass: 'Pass@123', label: '👑 Super Admin — Manage all societies' },
-    admin: { phone: '6677889900', pass: 'Pass@123', label: 'Admin Access — Full control' },
-    resident: { phone: '8976351526', pass: 'Pass@123', label: 'Resident — MyGate Member' }
+    superadmin: {
+      phone: "1122334455",
+      pass: "Pass@123",
+      label: "👑 Super Admin — Manage all societies",
+    },
+    admin: {
+      phone: "6677889900",
+      pass: "Pass@123",
+      label: "Admin Access — Full control",
+    },
+    resident: {
+      phone: "8976351526",
+      pass: "Pass@123",
+      label: "Resident — MyGate Member",
+    },
   };
   const h = hints[role];
-  if (h && el('demo-hint')) {
-    el('demo-hint').innerHTML = `<p>${h.label}</p><span>${h.phone} / ${h.pass}</span>`;
+  if (h && el("demo-hint")) {
+    el("demo-hint").innerHTML =
+      `<p>${h.label}</p><span>${h.phone} / ${h.pass}</span>`;
   }
 }
 
 // ============ RENDER LOGIN ============
 function renderLogin() {
-  document.title = 'Sign In — MyGateBell';
+  document.title = "Sign In — MyGateBell";
   document.body.innerHTML = `
     <div class="login-page">
       <div class="login-hero">
@@ -377,7 +453,7 @@ function renderLogin() {
     <div id="toast-container"></div>`;
 
   // Highlight the superadmin role as default
-  setDemoCredentials('superadmin');
+  setDemoCredentials("superadmin");
 }
 
 // ============ RENDER MAIN APP ============
@@ -397,13 +473,17 @@ function renderApp() {
         </div>
         <div class="sidebar-section">
           <div class="sidebar-section-label">Main Menu</div>
-          ${navItems.map(item => `
-            <div class="nav-item ${item.id === State.currentPage ? 'active' : ''}" 
+          ${navItems
+            .map(
+              (item) => `
+            <div class="nav-item ${item.id === State.currentPage ? "active" : ""}" 
                  data-page="${item.id}" onclick="navigateTo('${item.id}')">
               <i class="fa-solid ${item.icon} nav-icon"></i>
               <span>${item.label}</span>
-              ${item.badge ? `<span class="nav-badge" id="badge-${item.id}">${item.badge}</span>` : ''}
-            </div>`).join('')}
+              ${item.badge ? `<span class="nav-badge" id="badge-${item.id}">${item.badge}</span>` : ""}
+            </div>`,
+            )
+            .join("")}
         </div>
         <div class="sidebar-footer">
           <div class="user-card" onclick="doLogout()">
@@ -421,7 +501,7 @@ function renderApp() {
           <div class="topbar-left">
             <div class="menu-toggle" onclick="toggleMobileSidebar()"><i class="fa-solid fa-bars"></i></div>
             <div class="breadcrumb">
-              <span class="breadcrumb-item">${State.user.societyName || 'MyGateBell'}</span>
+              <span class="breadcrumb-item">${State.user.societyName || "MyGateBell"}</span>
               <span class="breadcrumb-sep"><i class="fa-solid fa-chevron-right"></i></span>
               <span class="breadcrumb-item active" id="breadcrumb-current">Dashboard</span>
             </div>
@@ -448,50 +528,112 @@ function renderApp() {
 
 function getNavItems(role) {
   const all = [
-    { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard', roles: ['admin', 'guard', 'resident'] },
-    { id: 'visitors', icon: 'fa-users-viewfinder', label: 'Visitors', roles: ['admin', 'guard', 'resident'], badge: null },
-    { id: 'residents', icon: 'fa-house-user', label: 'Residents & Flats', roles: ['admin'] },
-    { id: 'complaints', icon: 'fa-headset', label: 'Complaints', roles: ['admin', 'resident'] },
-    { id: 'notices', icon: 'fa-bullhorn', label: 'Notice Board', roles: ['admin', 'resident', 'guard'] },
-    { id: 'billing', icon: 'fa-file-invoice-dollar', label: 'Billing', roles: ['admin', 'resident'] },
-    { id: 'security', icon: 'fa-shield-halved', label: 'Security Panel', roles: ['admin', 'guard'] },
+    {
+      id: "dashboard",
+      icon: "fa-chart-pie",
+      label: "Dashboard",
+      roles: ["admin", "guard", "resident"],
+    },
+    {
+      id: "visitors",
+      icon: "fa-users-viewfinder",
+      label: "Visitors",
+      roles: ["admin", "guard", "resident"],
+      badge: null,
+    },
+    {
+      id: "residents",
+      icon: "fa-house-user",
+      label: "Residents & Flats",
+      roles: ["admin"],
+    },
+    {
+      id: "complaints",
+      icon: "fa-headset",
+      label: "Complaints",
+      roles: ["admin", "resident"],
+    },
+    {
+      id: "notices",
+      icon: "fa-bullhorn",
+      label: "Notice Board",
+      roles: ["admin", "resident", "guard"],
+    },
+    {
+      id: "billing",
+      icon: "fa-file-invoice-dollar",
+      label: "Billing",
+      roles: ["admin", "resident"],
+    },
+    {
+      id: "security",
+      icon: "fa-shield-halved",
+      label: "Security Panel",
+      roles: ["admin", "guard"],
+    },
   ];
-  return all.filter(item => item.roles.includes(role));
+  return all.filter((item) => item.roles.includes(role));
 }
 
 function toggleMobileSidebar() {
-  const s = el('sidebar');
-  const b = el('sidebar-backdrop');
-  s.classList.toggle('mobile-open');
-  b.classList.toggle('show');
+  const s = el("sidebar");
+  const b = el("sidebar-backdrop");
+  s.classList.toggle("mobile-open");
+  b.classList.toggle("show");
 }
 
 function closeMobileSidebar() {
-  el('sidebar')?.classList.remove('mobile-open');
-  el('sidebar-backdrop')?.classList.remove('show');
+  el("sidebar")?.classList.remove("mobile-open");
+  el("sidebar-backdrop")?.classList.remove("show");
 }
 
 function navigateTo(page) {
   State.currentPage = page;
-  qsa('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
-  const labels = { dashboard: 'Dashboard', visitors: 'Visitor Management', residents: 'Residents & Flats', complaints: 'Complaints', notices: 'Notice Board', billing: 'Billing', security: 'Security Panel' };
-  if (el('breadcrumb-current')) el('breadcrumb-current').textContent = labels[page] || page;
+  qsa(".nav-item").forEach((el) =>
+    el.classList.toggle("active", el.dataset.page === page),
+  );
+  const labels = {
+    dashboard: "Dashboard",
+    visitors: "Visitor Management",
+    residents: "Residents & Flats",
+    complaints: "Complaints",
+    notices: "Notice Board",
+    billing: "Billing",
+    security: "Security Panel",
+  };
+  if (el("breadcrumb-current"))
+    el("breadcrumb-current").textContent = labels[page] || page;
   closeMobileSidebar();
 
-  const pageContent = el('page-content');
+  const pageContent = el("page-content");
   if (pageContent) {
-    pageContent.innerHTML = '<div class="skeleton skeleton-card" style="height:120px;margin-bottom:16px"></div><div class="skeleton skeleton-card" style="height:80px;margin-bottom:16px"></div><div class="skeleton skeleton-card" style="height:300px"></div>';
+    pageContent.innerHTML =
+      '<div class="skeleton skeleton-card" style="height:120px;margin-bottom:16px"></div><div class="skeleton skeleton-card" style="height:80px;margin-bottom:16px"></div><div class="skeleton skeleton-card" style="height:300px"></div>';
   }
 
   setTimeout(() => {
     switch (page) {
-      case 'dashboard': renderDashboard(); break;
-      case 'visitors': renderVisitors(); break;
-      case 'residents': renderResidents(); break;
-      case 'complaints': renderComplaints(); break;
-      case 'notices': renderNotices(); break;
-      case 'billing': renderBilling(); break;
-      case 'security': renderSecurity(); break;
+      case "dashboard":
+        renderDashboard();
+        break;
+      case "visitors":
+        renderVisitors();
+        break;
+      case "residents":
+        renderResidents();
+        break;
+      case "complaints":
+        renderComplaints();
+        break;
+      case "notices":
+        renderNotices();
+        break;
+      case "billing":
+        renderBilling();
+        break;
+      case "security":
+        renderSecurity();
+        break;
     }
   }, 150);
 }
@@ -501,25 +643,25 @@ async function renderDashboard() {
   const role = State.user.role;
   try {
     const [stats, activity] = await Promise.all([
-      API.get('/dashboard/stats'),
-      API.get('/dashboard/recent-activity')
+      API.get("/dashboard/stats"),
+      API.get("/dashboard/recent-activity"),
     ]);
     State.data.dashStats = stats;
 
-    if (role === 'admin') renderAdminDashboard(stats, activity);
-    else if (role === 'guard') renderGuardDashboard(stats, activity);
+    if (role === "admin") renderAdminDashboard(stats, activity);
+    else if (role === "guard") renderGuardDashboard(stats, activity);
     else renderResidentDashboard(stats, activity);
   } catch (err) {
-    showError('Failed to load dashboard');
+    showError("Failed to load dashboard");
   }
 }
 
 function renderAdminDashboard(stats, activity) {
-  const pc = el('page-content');
+  const pc = el("page-content");
   pc.innerHTML = `
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title">Good morning, ${State.user.name.split(' ')[0]} 👋</h1>
+        <h1 class="page-title">Good morning, ${State.user.name.split(" ")[0]} 👋</h1>
         <p class="page-subtitle">Here's what's happening at Greenwood Heights today</p>
       </div>
       <div class="page-header-actions">
@@ -529,10 +671,10 @@ function renderAdminDashboard(stats, activity) {
     </div>
 
     <div class="stats-grid">
-      ${statCard('Total Residents', stats.totalResidents, 'fa-house-user', 'indigo', `${stats.occupiedFlats}/${stats.totalFlats} flats occupied`, 'neutral')}
-      ${statCard("Today's Visitors", stats.visitorsToday, 'fa-users-viewfinder', 'blue', `${stats.pendingApprovals} awaiting approval`, stats.pendingApprovals > 0 ? 'down' : 'neutral')}
-      ${statCard('Open Complaints', stats.openComplaints, 'fa-headset', stats.openComplaints > 3 ? 'red' : 'orange', 'Needs attention', stats.openComplaints > 3 ? 'down' : 'neutral')}
-      ${statCard('Revenue Collected', formatCurrency(stats.totalRevenue), 'fa-indian-rupee-sign', 'green', `${formatCurrency(stats.pendingRevenue)} pending`, 'up')}
+      ${statCard("Total Residents", stats.totalResidents, "fa-house-user", "indigo", `${stats.occupiedFlats}/${stats.totalFlats} flats occupied`, "neutral")}
+      ${statCard("Today's Visitors", stats.visitorsToday, "fa-users-viewfinder", "blue", `${stats.pendingApprovals} awaiting approval`, stats.pendingApprovals > 0 ? "down" : "neutral")}
+      ${statCard("Open Complaints", stats.openComplaints, "fa-headset", stats.openComplaints > 3 ? "red" : "orange", "Needs attention", stats.openComplaints > 3 ? "down" : "neutral")}
+      ${statCard("Revenue Collected", formatCurrency(stats.totalRevenue), "fa-indian-rupee-sign", "green", `${formatCurrency(stats.pendingRevenue)} pending`, "up")}
     </div>
 
     <div class="grid-cols-6-4" style="margin-bottom:20px">
@@ -562,8 +704,12 @@ function renderAdminDashboard(stats, activity) {
           <button class="btn btn-ghost btn-sm" onclick="navigateTo('visitors')">View All</button>
         </div>
         <div class="card-body" style="padding:0">
-          ${activity.recentVisitors.length === 0 ? emptyState('fa-users', 'No recent visitors') :
-            activity.recentVisitors.map(v => `
+          ${
+            activity.recentVisitors.length === 0
+              ? emptyState("fa-users", "No recent visitors")
+              : activity.recentVisitors
+                  .map(
+                    (v) => `
               <div class="flex items-center gap-3" style="padding:12px 20px;border-bottom:1px solid var(--gray-100)">
                 <div class="user-avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0">${initials(v.name)}</div>
                 <div style="flex:1;min-width:0">
@@ -574,7 +720,10 @@ function renderAdminDashboard(stats, activity) {
                   ${statusBadge(v.status)}
                   <div class="text-xs text-muted mt-1">${timeAgo(v.createdAt)}</div>
                 </div>
-              </div>`).join('')}
+              </div>`,
+                  )
+                  .join("")
+          }
         </div>
       </div>
       <div class="card">
@@ -583,7 +732,9 @@ function renderAdminDashboard(stats, activity) {
           <button class="btn btn-ghost btn-sm" onclick="navigateTo('complaints')">View All</button>
         </div>
         <div class="card-body" style="padding:0">
-          ${activity.recentComplaints.map(c => `
+          ${activity.recentComplaints
+            .map(
+              (c) => `
             <div class="flex items-center gap-3" style="padding:12px 20px;border-bottom:1px solid var(--gray-100)">
               <div class="cat-icon cat-${c.category}"><i class="fa-solid ${categoryIcon(c.category)}"></i></div>
               <div style="flex:1;min-width:0">
@@ -594,7 +745,9 @@ function renderAdminDashboard(stats, activity) {
                 ${statusBadge(c.status)}
                 <div class="text-xs text-muted mt-1">${timeAgo(c.createdAt)}</div>
               </div>
-            </div>`).join('')}
+            </div>`,
+            )
+            .join("")}
         </div>
       </div>
     </div>
@@ -605,9 +758,11 @@ function renderAdminDashboard(stats, activity) {
         <button class="btn btn-primary btn-sm" onclick="navigateTo('notices')">Manage Notices</button>
       </div>
       <div class="card-body" style="padding:0">
-        ${activity.recentNotices.map(n => `
+        ${activity.recentNotices
+          .map(
+            (n) => `
           <div class="flex items-center gap-3" style="padding:14px 22px;border-bottom:1px solid var(--gray-100)">
-            <div class="cat-icon" style="background:${n.priority==='urgent'?'var(--red-100)':n.priority==='important'?'var(--orange-100)':'var(--primary-100)'};color:${n.priority==='urgent'?'var(--red-600)':n.priority==='important'?'var(--orange-600)':'var(--primary-600)'}">
+            <div class="cat-icon" style="background:${n.priority === "urgent" ? "var(--red-100)" : n.priority === "important" ? "var(--orange-100)" : "var(--primary-100)"};color:${n.priority === "urgent" ? "var(--red-600)" : n.priority === "important" ? "var(--orange-600)" : "var(--primary-600)"}">
               <i class="fa-solid fa-bullhorn"></i>
             </div>
             <div style="flex:1">
@@ -615,7 +770,9 @@ function renderAdminDashboard(stats, activity) {
               <div class="text-muted text-xs">${formatDate(n.createdAt)} · ${n.acknowledgedBy.length} acknowledged</div>
             </div>
             <span class="badge badge-${n.priority}">${n.priority}</span>
-          </div>`).join('')}
+          </div>`,
+          )
+          .join("")}
       </div>
     </div>`;
 
@@ -627,7 +784,12 @@ function renderAdminDashboard(stats, activity) {
 }
 
 function statCard(label, value, icon, color, sub, trend) {
-  const trendIcon = trend === 'up' ? 'fa-arrow-trend-up' : trend === 'down' ? 'fa-arrow-trend-down' : 'fa-minus';
+  const trendIcon =
+    trend === "up"
+      ? "fa-arrow-trend-up"
+      : trend === "down"
+        ? "fa-arrow-trend-down"
+        : "fa-minus";
   return `
     <div class="stat-card ${color}">
       <div class="stat-header">
@@ -641,50 +803,91 @@ function statCard(label, value, icon, color, sub, trend) {
 }
 
 function drawVisitorChart(data) {
-  const ctx = el('visitorChart');
+  const ctx = el("visitorChart");
   if (!ctx) return;
   if (State.charts.visitor) State.charts.visitor.destroy();
   State.charts.visitor = new Chart(ctx, {
-    type: 'bar',
+    type: "bar",
     data: {
-      labels: data.map(d => d.day),
-      datasets: [{
-        label: 'Visitors',
-        data: data.map(d => d.count),
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
-        borderColor: 'rgba(99, 102, 241, 0.8)',
-        borderWidth: 2,
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
+      labels: data.map((d) => d.day),
+      datasets: [
+        {
+          label: "Visitors",
+          data: data.map((d) => d.count),
+          backgroundColor: "rgba(99, 102, 241, 0.15)",
+          borderColor: "rgba(99, 102, 241, 0.8)",
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+      ],
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 } } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-    }
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(0,0,0,0.04)" },
+          ticks: { font: { size: 11 } },
+        },
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      },
+    },
   });
 }
 
 function drawComplaintChart(data) {
-  const ctx = el('complaintChart');
+  const ctx = el("complaintChart");
   if (!ctx) return;
   if (State.charts.complaint) State.charts.complaint.destroy();
-  const colors = ['#6366f1','#f97316','#22c55e','#3b82f6','#ec4899','#8b5cf6','#14b8a6'];
-  const filtered = data.filter(d => d.count > 0);
-  if (filtered.length === 0) { ctx.parentElement.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p class="text-muted">No complaint data yet</p></div>'; return; }
+  const colors = [
+    "#6366f1",
+    "#f97316",
+    "#22c55e",
+    "#3b82f6",
+    "#ec4899",
+    "#8b5cf6",
+    "#14b8a6",
+  ];
+  const filtered = data.filter((d) => d.count > 0);
+  if (filtered.length === 0) {
+    ctx.parentElement.innerHTML =
+      '<div class="empty-state"><div class="empty-state-icon">📊</div><p class="text-muted">No complaint data yet</p></div>';
+    return;
+  }
   State.charts.complaint = new Chart(ctx, {
-    type: 'doughnut',
+    type: "doughnut",
     data: {
-      labels: filtered.map(d => d.category.charAt(0).toUpperCase() + d.category.slice(1)),
-      datasets: [{ data: filtered.map(d => d.count), backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }]
+      labels: filtered.map(
+        (d) => d.category.charAt(0).toUpperCase() + d.category.slice(1),
+      ),
+      datasets: [
+        {
+          data: filtered.map((d) => d.count),
+          backgroundColor: colors,
+          borderWidth: 0,
+          hoverOffset: 4,
+        },
+      ],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } } }, cutout: '60%' }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "right",
+          labels: { font: { size: 11 }, boxWidth: 12, padding: 12 },
+        },
+      },
+      cutout: "60%",
+    },
   });
 }
 
 function renderGuardDashboard(stats, activity) {
-  const pc = el('page-content');
+  const pc = el("page-content");
   pc.innerHTML = `
     <div class="page-header">
       <div class="page-header-left">
@@ -694,10 +897,10 @@ function renderGuardDashboard(stats, activity) {
       <button class="btn btn-primary" onclick="navigateTo('security')"><i class="fa-solid fa-shield-halved"></i> Open Security Panel</button>
     </div>
     <div class="stats-grid">
-      ${statCard("Today's Visitors", stats.visitorsToday, 'fa-users', 'blue', 'People entered today', 'neutral')}
-      ${statCard('Pending Approvals', stats.pendingApprovals, 'fa-clock', stats.pendingApprovals > 0 ? 'orange' : 'green', 'Awaiting resident approval', stats.pendingApprovals > 0 ? 'down' : 'neutral')}
-      ${statCard('Active Residents', stats.totalResidents, 'fa-house-user', 'indigo', 'Registered residents', 'neutral')}
-      ${statCard('Active Notices', stats.activeNotices, 'fa-bullhorn', 'purple', 'From administration', 'neutral')}
+      ${statCard("Today's Visitors", stats.visitorsToday, "fa-users", "blue", "People entered today", "neutral")}
+      ${statCard("Pending Approvals", stats.pendingApprovals, "fa-clock", stats.pendingApprovals > 0 ? "orange" : "green", "Awaiting resident approval", stats.pendingApprovals > 0 ? "down" : "neutral")}
+      ${statCard("Active Residents", stats.totalResidents, "fa-house-user", "indigo", "Registered residents", "neutral")}
+      ${statCard("Active Notices", stats.activeNotices, "fa-bullhorn", "purple", "From administration", "neutral")}
     </div>
     <div class="card">
       <div class="card-header">
@@ -705,7 +908,9 @@ function renderGuardDashboard(stats, activity) {
         <button class="btn btn-primary btn-sm" onclick="navigateTo('security')"><i class="fa-solid fa-plus"></i> Log Visitor</button>
       </div>
       <div class="card-body" style="padding:0">
-        ${activity.recentVisitors.map(v => `
+        ${activity.recentVisitors
+          .map(
+            (v) => `
           <div class="flex items-center gap-3" style="padding:14px 22px;border-bottom:1px solid var(--gray-100)">
             <div class="user-avatar" style="width:38px;height:38px;font-size:14px;flex-shrink:0">${initials(v.name)}</div>
             <div style="flex:1;min-width:0">
@@ -716,25 +921,27 @@ function renderGuardDashboard(stats, activity) {
               ${statusBadge(v.status)}
               <div class="text-xs text-muted mt-1">${v.entryTime ? formatTime(v.entryTime) : timeAgo(v.createdAt)}</div>
             </div>
-          </div>`).join('')}
+          </div>`,
+          )
+          .join("")}
       </div>
     </div>`;
 }
 
 function renderResidentDashboard(stats, activity) {
-  const pc = el('page-content');
+  const pc = el("page-content");
   pc.innerHTML = `
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title">Welcome, ${State.user.name.split(' ')[0]} 🏡</h1>
+        <h1 class="page-title">Welcome, ${State.user.name.split(" ")[0]} 🏡</h1>
         <p class="page-subtitle">Your Greenwood Heights resident portal</p>
       </div>
     </div>
     <div class="stats-grid">
-      ${statCard('My Visitors Today', stats.visitorsToday, 'fa-users-viewfinder', 'blue', 'Logged at gate today', 'neutral')}
-      ${statCard('Open Complaints', stats.openComplaints, 'fa-headset', stats.openComplaints > 0 ? 'orange' : 'green', 'Your active complaints', 'neutral')}
-      ${statCard('Notices', stats.activeNotices, 'fa-bullhorn', 'indigo', 'Unread announcements', 'neutral')}
-      ${statCard('Pending Bills', stats.billStats ? stats.billStats.unpaid + stats.billStats.overdue : 0, 'fa-file-invoice-dollar', 'orange', 'Due this month', 'neutral')}
+      ${statCard("My Visitors Today", stats.visitorsToday, "fa-users-viewfinder", "blue", "Logged at gate today", "neutral")}
+      ${statCard("Open Complaints", stats.openComplaints, "fa-headset", stats.openComplaints > 0 ? "orange" : "green", "Your active complaints", "neutral")}
+      ${statCard("Notices", stats.activeNotices, "fa-bullhorn", "indigo", "Unread announcements", "neutral")}
+      ${statCard("Pending Bills", stats.billStats ? stats.billStats.unpaid + stats.billStats.overdue : 0, "fa-file-invoice-dollar", "orange", "Due this month", "neutral")}
     </div>
     <div class="grid-2">
       <div class="card">
@@ -743,7 +950,10 @@ function renderResidentDashboard(stats, activity) {
           <button class="btn btn-primary btn-sm" onclick="openAddVisitorModal()"><i class="fa-solid fa-plus"></i> Pre-approve</button>
         </div>
         <div class="card-body" style="padding:0">
-          ${activity.recentVisitors.slice(0, 4).map(v => `
+          ${activity.recentVisitors
+            .slice(0, 4)
+            .map(
+              (v) => `
             <div class="flex items-center gap-3" style="padding:12px 20px;border-bottom:1px solid var(--gray-100)">
               <div class="user-avatar" style="width:34px;height:34px;font-size:12px;flex-shrink:0">${initials(v.name)}</div>
               <div style="flex:1;min-width:0">
@@ -751,8 +961,10 @@ function renderResidentDashboard(stats, activity) {
                 <div class="text-muted text-xs">${v.purpose} · ${timeAgo(v.createdAt)}</div>
               </div>
               ${statusBadge(v.status)}
-            </div>`).join('')}
-          ${activity.recentVisitors.length === 0 ? '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:36px">🚶</div><p class="text-muted text-sm">No visitors logged today</p></div>' : ''}
+            </div>`,
+            )
+            .join("")}
+          ${activity.recentVisitors.length === 0 ? '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:36px">🚶</div><p class="text-muted text-sm">No visitors logged today</p></div>' : ""}
         </div>
       </div>
       <div class="card">
@@ -761,15 +973,19 @@ function renderResidentDashboard(stats, activity) {
           <button class="btn btn-ghost btn-sm" onclick="navigateTo('notices')">View All</button>
         </div>
         <div class="card-body" style="padding:0">
-          ${activity.recentNotices.map(n => `
+          ${activity.recentNotices
+            .map(
+              (n) => `
             <div style="padding:14px 20px;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="navigateTo('notices')">
               <div class="flex items-center gap-2 mb-1">
                 <span class="badge badge-${n.priority}">${n.priority}</span>
                 <span style="font-size:11px;color:var(--gray-400)">${timeAgo(n.createdAt)}</span>
               </div>
               <div class="font-semibold" style="font-size:14px">${n.title}</div>
-              <div class="text-muted text-xs mt-1">${n.content.substring(0,80)}...</div>
-            </div>`).join('')}
+              <div class="text-muted text-xs mt-1">${n.content.substring(0, 80)}...</div>
+            </div>`,
+            )
+            .join("")}
         </div>
       </div>
     </div>`;
@@ -779,14 +995,14 @@ function renderResidentDashboard(stats, activity) {
 async function renderVisitors() {
   try {
     const [visitors, flats] = await Promise.all([
-      API.get('/visitors'),
-      API.get('/residents/flats/all')
+      API.get("/visitors"),
+      API.get("/residents/flats/all"),
     ]);
     State.data.visitors = visitors;
     State.data.flats = flats;
 
     const role = State.user.role;
-    const pc = el('page-content');
+    const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
         <div class="page-header-left">
@@ -794,7 +1010,7 @@ async function renderVisitors() {
           <p class="page-subtitle">${visitors.length} total visitors tracked</p>
         </div>
         <div class="page-header-actions">
-          ${role !== 'guard' ? `<button class="btn btn-outline-primary btn-sm" onclick="openAddVisitorModal()"><i class="fa-solid fa-calendar-check"></i> Pre-approve</button>` : ''}
+          ${role !== "guard" ? `<button class="btn btn-outline-primary btn-sm" onclick="openAddVisitorModal()"><i class="fa-solid fa-calendar-check"></i> Pre-approve</button>` : ""}
           <button class="btn btn-primary btn-sm" onclick="openAddVisitorModal()"><i class="fa-solid fa-plus"></i> Log Visitor</button>
         </div>
       </div>
@@ -835,20 +1051,23 @@ async function renderVisitors() {
             </tbody>
           </table>
         </div>
-        ${visitors.length === 0 ? emptyState('fa-users', 'No visitors logged', 'Visitor records will appear here once logged by the security guard.') : ''}
+        ${visitors.length === 0 ? emptyState("fa-users", "No visitors logged", "Visitor records will appear here once logged by the security guard.") : ""}
       </div>
 
       ${getVisitorModal(flats)}`;
 
-    setupModalClose('visitor-modal');
+    setupModalClose("visitor-modal");
   } catch (err) {
-    showError('Failed to load visitors');
+    showError("Failed to load visitors");
   }
 }
 
 function renderVisitorRows(visitors) {
-  if (visitors.length === 0) return `<tr><td colspan="7">${emptyState('fa-users', 'No visitors found')}</td></tr>`;
-  return visitors.map(v => `
+  if (visitors.length === 0)
+    return `<tr><td colspan="7">${emptyState("fa-users", "No visitors found")}</td></tr>`;
+  return visitors
+    .map(
+      (v) => `
     <tr>
       <td>
         <div class="flex items-center gap-2">
@@ -869,14 +1088,20 @@ function renderVisitorRows(visitors) {
       <td>${statusBadge(v.status)}</td>
       <td>
         <div class="flex gap-2">
-          ${v.status === 'pending' ? `
+          ${
+            v.status === "pending"
+              ? `
             <button class="btn btn-success btn-sm" onclick="approveVisitor('${v.id}')"><i class="fa-solid fa-check"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="rejectVisitor('${v.id}')"><i class="fa-solid fa-times"></i></button>` : ''}
-          ${v.status === 'approved' ? `<button class="btn btn-ghost btn-sm" onclick="exitVisitor('${v.id}')"><i class="fa-solid fa-door-open"></i> Exit</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="rejectVisitor('${v.id}')"><i class="fa-solid fa-times"></i></button>`
+              : ""
+          }
+          ${v.status === "approved" ? `<button class="btn btn-ghost btn-sm" onclick="exitVisitor('${v.id}')"><i class="fa-solid fa-door-open"></i> Exit</button>` : ""}
           <button class="btn btn-ghost btn-icon" onclick="deleteVisitor('${v.id}')" title="Delete"><i class="fa-solid fa-trash" style="color:var(--red-500)"></i></button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`,
+    )
+    .join("");
 }
 
 function getVisitorModal(flats) {
@@ -904,7 +1129,13 @@ function getVisitorModal(flats) {
                 <label class="form-label">Flat <span class="required">*</span></label>
                 <select class="form-input" id="v-flat" required>
                   <option value="">Select flat</option>
-                  ${flats.filter(f => f.status === 'occupied').map(f => `<option value="${f.id}">${f.flatNo} — ${f.owner ? f.owner.name : 'Resident'}</option>`).join('')}
+                  ${flats
+                    .filter((f) => f.status === "occupied")
+                    .map(
+                      (f) =>
+                        `<option value="${f.id}">${f.flatNo} — ${f.owner ? f.owner.name : "Resident"}</option>`,
+                    )
+                    .join("")}
                 </select>
               </div>
               <div class="form-group">
@@ -943,83 +1174,116 @@ function getVisitorModal(flats) {
     </div>`;
 }
 
-function openAddVisitorModal() { Modal.open('visitor-modal'); }
+function openAddVisitorModal() {
+  Modal.open("visitor-modal");
+}
 
 async function submitVisitor(e) {
   e.preventDefault();
-  const flatId = el('v-flat').value;
-  const name = el('v-name').value.trim();
-  const phone = el('v-phone').value.trim();
-  const purpose = el('v-purpose').value;
-  const vehicleNo = el('v-vehicle').value.trim();
-  const isPreApproved = el('v-preapproved').checked;
+  const flatId = el("v-flat").value;
+  const name = el("v-name").value.trim();
+  const phone = el("v-phone").value.trim();
+  const purpose = el("v-purpose").value;
+  const vehicleNo = el("v-vehicle").value.trim();
+  const isPreApproved = el("v-preapproved").checked;
 
-  if (!name || !phone || !flatId || !purpose) { Toast.error('Validation Error', 'Please fill all required fields'); return; }
-  if (!/^\d{10}$/.test(phone)) { Toast.error('Invalid Phone', 'Enter a valid 10-digit phone number'); return; }
+  if (!name || !phone || !flatId || !purpose) {
+    Toast.error("Validation Error", "Please fill all required fields");
+    return;
+  }
+  if (!/^\d{10}$/.test(phone)) {
+    Toast.error("Invalid Phone", "Enter a valid 10-digit phone number");
+    return;
+  }
 
   try {
-    await API.post('/visitors', { name, phone, purpose, flatId, vehicleNo, isPreApproved, guardId: State.user.id });
-    Toast.success('Visitor Logged', `${name} has been logged successfully`);
-    Modal.close('visitor-modal');
+    await API.post("/visitors", {
+      name,
+      phone,
+      purpose,
+      flatId,
+      vehicleNo,
+      isPreApproved,
+      guardId: State.user.id,
+    });
+    Toast.success("Visitor Logged", `${name} has been logged successfully`);
+    Modal.close("visitor-modal");
     renderVisitors();
   } catch (err) {
-    Toast.error('Failed', err.message);
+    Toast.error("Failed", err.message);
   }
 }
 
 async function approveVisitor(id) {
   try {
     await API.put(`/visitors/${id}/approve`, { approvedBy: State.user.id });
-    Toast.success('Approved', 'Visitor has been approved for entry');
+    Toast.success("Approved", "Visitor has been approved for entry");
     renderVisitors();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function rejectVisitor(id) {
   try {
     await API.put(`/visitors/${id}/reject`, {});
-    Toast.warning('Rejected', 'Visitor entry has been rejected');
+    Toast.warning("Rejected", "Visitor entry has been rejected");
     renderVisitors();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function exitVisitor(id) {
   try {
     await API.put(`/visitors/${id}/exit`, {});
-    Toast.info('Exit Logged', 'Visitor exit has been recorded');
+    Toast.info("Exit Logged", "Visitor exit has been recorded");
     renderVisitors();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function deleteVisitor(id) {
-  Modal.confirm('Delete Visitor Record', 'This will permanently remove the visitor record. This action cannot be undone.', async () => {
-    try {
-      await API.delete(`/visitors/${id}`);
-      Toast.success('Deleted', 'Visitor record removed');
-      renderVisitors();
-    } catch (err) { Toast.error('Error', err.message); }
-  });
+  Modal.confirm(
+    "Delete Visitor Record",
+    "This will permanently remove the visitor record. This action cannot be undone.",
+    async () => {
+      try {
+        await API.delete(`/visitors/${id}`);
+        Toast.success("Deleted", "Visitor record removed");
+        renderVisitors();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 async function loadTodayVisitors() {
-  const data = await API.get('/visitors/today');
-  const tbody = el('visitors-tbody');
+  const data = await API.get("/visitors/today");
+  const tbody = el("visitors-tbody");
   if (tbody) tbody.innerHTML = renderVisitorRows(data);
-  const cnt = el('visitor-count');
+  const cnt = el("visitor-count");
   if (cnt) cnt.textContent = `${data.length} records (today)`;
 }
 
 function filterVisitors() {
-  const search = el('visitor-search')?.value.toLowerCase() || '';
-  const status = el('visitor-status-filter')?.value || '';
-  const visitors = State.data.visitors.filter(v => {
-    const matchSearch = !search || v.name.toLowerCase().includes(search) || v.phone.includes(search) || v.flatNo.toLowerCase().includes(search) || v.purpose.toLowerCase().includes(search);
+  const search = el("visitor-search")?.value.toLowerCase() || "";
+  const status = el("visitor-status-filter")?.value || "";
+  const visitors = State.data.visitors.filter((v) => {
+    const matchSearch =
+      !search ||
+      v.name.toLowerCase().includes(search) ||
+      v.phone.includes(search) ||
+      v.flatNo.toLowerCase().includes(search) ||
+      v.purpose.toLowerCase().includes(search);
     const matchStatus = !status || v.status === status;
     return matchSearch && matchStatus;
   });
-  const tbody = el('visitors-tbody');
+  const tbody = el("visitors-tbody");
   if (tbody) tbody.innerHTML = renderVisitorRows(visitors);
-  const cnt = el('visitor-count');
+  const cnt = el("visitor-count");
   if (cnt) cnt.textContent = `${visitors.length} records`;
 }
 
@@ -1027,13 +1291,13 @@ function filterVisitors() {
 async function renderResidents() {
   try {
     const [residents, flats] = await Promise.all([
-      API.get('/residents'),
-      API.get('/residents/flats/all')
+      API.get("/residents"),
+      API.get("/residents/flats/all"),
     ]);
     State.data.residents = residents;
     State.data.flats = flats;
 
-    const pc = el('page-content');
+    const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
         <div class="page-header-left">
@@ -1059,7 +1323,7 @@ async function renderResidents() {
           </div>
           <select class="form-input" style="width:auto" id="flat-block-filter" onchange="filterFlats()">
             <option value="">All Blocks</option>
-            ${[...new Set(flats.map(f => f.block))].map(b => `<option value="${b}">Block ${b}</option>`).join('')}
+            ${[...new Set(flats.map((f) => f.block))].map((b) => `<option value="${b}">Block ${b}</option>`).join("")}
           </select>
           <select class="form-input" style="width:auto" id="flat-status-filter" onchange="filterFlats()">
             <option value="">All Status</option>
@@ -1092,14 +1356,19 @@ async function renderResidents() {
       ${getResidentModal(flats)}
       ${getFlatModal()}`;
 
-    setupModalClose('resident-modal');
-    setupModalClose('flat-modal');
-  } catch (err) { showError('Failed to load residents'); }
+    setupModalClose("resident-modal");
+    setupModalClose("flat-modal");
+  } catch (err) {
+    showError("Failed to load residents");
+  }
 }
 
 function renderFlatCards(flats) {
-  if (flats.length === 0) return emptyState('fa-building', 'No flats added yet');
-  return flats.map(f => `
+  if (flats.length === 0)
+    return emptyState("fa-building", "No flats added yet");
+  return flats
+    .map(
+      (f) => `
     <div class="flat-card">
       <div class="flat-card-top">
         <div>
@@ -1110,24 +1379,28 @@ function renderFlatCards(flats) {
       </div>
       <div class="flat-card-body">
         <div class="flat-info-row"><i class="fa-solid fa-layer-group"></i> Floor ${f.floor} · ${f.area} sq ft</div>
-        ${f.owner ? `<div class="flat-info-row"><i class="fa-solid fa-user-tie"></i> ${f.owner.name} <span style="font-size:11px;color:var(--gray-400)">(Owner)</span></div>` : ''}
-        ${f.tenant ? `<div class="flat-info-row"><i class="fa-solid fa-user"></i> ${f.tenant.name} <span style="font-size:11px;color:var(--gray-400)">(Tenant)</span></div>` : ''}
-        ${f.status === 'vacant' ? `<div class="flat-info-row" style="color:var(--orange-600)"><i class="fa-solid fa-circle-exclamation" style="color:var(--orange-500)"></i> Vacant</div>` : ''}
-        ${f.vehicles && f.vehicles.length > 0 ? `<div class="flat-info-row"><i class="fa-solid fa-car"></i> ${f.vehicles.map(v => v.number).join(', ')}</div>` : ''}
+        ${f.owner ? `<div class="flat-info-row"><i class="fa-solid fa-user-tie"></i> ${f.owner.name} <span style="font-size:11px;color:var(--gray-400)">(Owner)</span></div>` : ""}
+        ${f.tenant ? `<div class="flat-info-row"><i class="fa-solid fa-user"></i> ${f.tenant.name} <span style="font-size:11px;color:var(--gray-400)">(Tenant)</span></div>` : ""}
+        ${f.status === "vacant" ? `<div class="flat-info-row" style="color:var(--orange-600)"><i class="fa-solid fa-circle-exclamation" style="color:var(--orange-500)"></i> Vacant</div>` : ""}
+        ${f.vehicles && f.vehicles.length > 0 ? `<div class="flat-info-row"><i class="fa-solid fa-car"></i> ${f.vehicles.map((v) => v.number).join(", ")}</div>` : ""}
       </div>
       <div class="flat-card-footer">
         <button class="btn btn-ghost btn-sm" onclick="editFlat('${f.id}')"><i class="fa-solid fa-pen"></i></button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red-500)" onclick="deleteFlat('${f.id}')"><i class="fa-solid fa-trash"></i></button>
       </div>
-    </div>`).join('');
+    </div>`,
+    )
+    .join("");
 }
 
 function renderResidentRows(residents, flats) {
-  if (residents.length === 0) return `<tr><td colspan="6">${emptyState('fa-users', 'No residents found')}</td></tr>`;
-  return residents.map(r => {
-    const flat = flats.find(f => f.id === r.flatId);
-    const isOwner = flat?.ownerId === r.id;
-    return `
+  if (residents.length === 0)
+    return `<tr><td colspan="6">${emptyState("fa-users", "No residents found")}</td></tr>`;
+  return residents
+    .map((r) => {
+      const flat = flats.find((f) => f.id === r.flatId);
+      const isOwner = flat?.ownerId === r.id;
+      return `
       <tr>
         <td>
           <div class="flex items-center gap-2">
@@ -1140,8 +1413,8 @@ function renderResidentRows(residents, flats) {
         </td>
         <td><div>${r.phone}</div><div class="text-xs text-muted">${r.email}</div></td>
         <td>${flat ? `<span class="font-semibold">${flat.flatNo}</span><div class="text-xs text-muted">Block ${flat.block}</div>` : '<span class="text-muted">Unassigned</span>'}</td>
-        <td><span class="badge ${isOwner ? 'badge-approved' : 'badge-in_progress'}">${isOwner ? '🏠 Owner' : '👤 Tenant'}</span></td>
-        <td><span class="badge ${r.isActive ? 'badge-approved' : 'badge-rejected'}">${r.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td><span class="badge ${isOwner ? "badge-approved" : "badge-in_progress"}">${isOwner ? "🏠 Owner" : "👤 Tenant"}</span></td>
+        <td><span class="badge ${r.isActive ? "badge-approved" : "badge-rejected"}">${r.isActive ? "Active" : "Inactive"}</span></td>
         <td>
           <div class="flex gap-2">
             <button class="btn btn-ghost btn-icon" onclick="editResident('${r.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
@@ -1149,7 +1422,8 @@ function renderResidentRows(residents, flats) {
           </div>
         </td>
       </tr>`;
-  }).join('');
+    })
+    .join("");
 }
 
 function getResidentModal(flats) {
@@ -1181,7 +1455,7 @@ function getResidentModal(flats) {
               <label class="form-label">Assign Flat</label>
               <select class="form-input" id="r-flat">
                 <option value="">No flat assigned</option>
-                ${flats.map(f => `<option value="${f.id}">${f.flatNo} — Block ${f.block}</option>`).join('')}
+                ${flats.map((f) => `<option value="${f.id}">${f.flatNo} — Block ${f.block}</option>`).join("")}
               </select>
             </div>
             <div class="form-group">
@@ -1255,114 +1529,193 @@ function getFlatModal() {
 }
 
 function openResidentModal(id) {
-  el('r-id').value = id || '';
-  el('r-name').value = ''; el('r-phone').value = ''; el('r-email').value = ''; el('r-flat').value = ''; el('r-type').value = 'owner';
-  el('resident-modal-title').textContent = id ? 'Edit Resident' : 'Add Resident';
+  el("r-id").value = id || "";
+  el("r-name").value = "";
+  el("r-phone").value = "";
+  el("r-email").value = "";
+  el("r-flat").value = "";
+  el("r-type").value = "owner";
+  el("resident-modal-title").textContent = id
+    ? "Edit Resident"
+    : "Add Resident";
   if (id) {
-    const r = State.data.residents.find(x => x.id === id);
-    if (r) { el('r-name').value = r.name; el('r-phone').value = r.phone; el('r-email').value = r.email; el('r-flat').value = r.flatId || ''; }
+    const r = State.data.residents.find((x) => x.id === id);
+    if (r) {
+      el("r-name").value = r.name;
+      el("r-phone").value = r.phone;
+      el("r-email").value = r.email;
+      el("r-flat").value = r.flatId || "";
+    }
   }
-  Modal.open('resident-modal');
+  Modal.open("resident-modal");
 }
 
 function openFlatModal(id) {
-  el('fl-id').value = id || '';
-  el('fl-no').value = ''; el('fl-block').value = ''; el('fl-floor').value = '1'; el('fl-area').value = ''; el('fl-type').value = '2BHK';
-  el('flat-modal-title').textContent = id ? 'Edit Flat' : 'Add Flat';
+  el("fl-id").value = id || "";
+  el("fl-no").value = "";
+  el("fl-block").value = "";
+  el("fl-floor").value = "1";
+  el("fl-area").value = "";
+  el("fl-type").value = "2BHK";
+  el("flat-modal-title").textContent = id ? "Edit Flat" : "Add Flat";
   if (id) {
-    const f = State.data.flats.find(x => x.id === id);
-    if (f) { el('fl-no').value = f.flatNo; el('fl-block').value = f.block; el('fl-floor').value = f.floor; el('fl-area').value = f.area; el('fl-type').value = f.type; }
+    const f = State.data.flats.find((x) => x.id === id);
+    if (f) {
+      el("fl-no").value = f.flatNo;
+      el("fl-block").value = f.block;
+      el("fl-floor").value = f.floor;
+      el("fl-area").value = f.area;
+      el("fl-type").value = f.type;
+    }
   }
-  Modal.open('flat-modal');
+  Modal.open("flat-modal");
 }
 
-function editResident(id) { openResidentModal(id); }
-function editFlat(id) { openFlatModal(id); }
+function editResident(id) {
+  openResidentModal(id);
+}
+function editFlat(id) {
+  openFlatModal(id);
+}
 
 async function submitResident() {
-  const id = el('r-id').value;
-  const name = el('r-name').value.trim();
-  const email = el('r-email').value.trim();
-  const phone = el('r-phone').value.trim();
-  const flatId = el('r-flat').value;
-  const type = el('r-type').value;
-  if (!name || !email || !phone) { Toast.error('Validation', 'Name, email and phone are required'); return; }
+  const id = el("r-id").value;
+  const name = el("r-name").value.trim();
+  const email = el("r-email").value.trim();
+  const phone = el("r-phone").value.trim();
+  const flatId = el("r-flat").value;
+  const type = el("r-type").value;
+  if (!name || !email || !phone) {
+    Toast.error("Validation", "Name, email and phone are required");
+    return;
+  }
   try {
-    if (id) { await API.put(`/residents/${id}`, { name, email, phone }); Toast.success('Updated', 'Resident updated successfully'); }
-    else { await API.post('/residents', { name, email, phone, flatId, type }); Toast.success('Added', 'Resident added successfully'); }
-    Modal.close('resident-modal');
+    if (id) {
+      await API.put(`/residents/${id}`, { name, email, phone });
+      Toast.success("Updated", "Resident updated successfully");
+    } else {
+      await API.post("/residents", { name, email, phone, flatId, type });
+      Toast.success("Added", "Resident added successfully");
+    }
+    Modal.close("resident-modal");
     renderResidents();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function submitFlat() {
-  const id = el('fl-id').value;
-  const flatNo = el('fl-no').value.trim();
-  const block = el('fl-block').value.trim();
-  const floor = parseInt(el('fl-floor').value) || 1;
-  const area = parseInt(el('fl-area').value) || 0;
-  const type = el('fl-type').value;
-  if (!flatNo || !block) { Toast.error('Validation', 'Flat number and block are required'); return; }
+  const id = el("fl-id").value;
+  const flatNo = el("fl-no").value.trim();
+  const block = el("fl-block").value.trim();
+  const floor = parseInt(el("fl-floor").value) || 1;
+  const area = parseInt(el("fl-area").value) || 0;
+  const type = el("fl-type").value;
+  if (!flatNo || !block) {
+    Toast.error("Validation", "Flat number and block are required");
+    return;
+  }
   try {
-    if (id) { await API.put(`/residents/flats/${id}`, { flatNo, block, floor, area, type }); Toast.success('Updated', 'Flat updated'); }
-    else { await API.post('/residents/flats', { flatNo, block, floor, area, type }); Toast.success('Added', `Flat ${flatNo} created`); }
-    Modal.close('flat-modal');
+    if (id) {
+      await API.put(`/residents/flats/${id}`, {
+        flatNo,
+        block,
+        floor,
+        area,
+        type,
+      });
+      Toast.success("Updated", "Flat updated");
+    } else {
+      await API.post("/residents/flats", { flatNo, block, floor, area, type });
+      Toast.success("Added", `Flat ${flatNo} created`);
+    }
+    Modal.close("flat-modal");
     renderResidents();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function deleteResident(id) {
-  const r = State.data.residents.find(x => x.id === id);
-  Modal.confirm('Remove Resident', `Are you sure you want to remove <strong>${r?.name}</strong> from the system? This action cannot be undone.`, async () => {
-    try { await API.delete(`/residents/${id}`); Toast.success('Removed', 'Resident removed successfully'); renderResidents(); }
-    catch (err) { Toast.error('Error', err.message); }
-  });
+  const r = State.data.residents.find((x) => x.id === id);
+  Modal.confirm(
+    "Remove Resident",
+    `Are you sure you want to remove <strong>${r?.name}</strong> from the system? This action cannot be undone.`,
+    async () => {
+      try {
+        await API.delete(`/residents/${id}`);
+        Toast.success("Removed", "Resident removed successfully");
+        renderResidents();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 async function deleteFlat(id) {
-  const f = State.data.flats.find(x => x.id === id);
-  Modal.confirm('Delete Flat', `Are you sure you want to delete flat <strong>${f?.flatNo}</strong>? All associated data will be affected.`, async () => {
-    try { await API.delete(`/residents/flats/${id}`); Toast.success('Deleted', 'Flat deleted'); renderResidents(); }
-    catch (err) { Toast.error('Error', err.message); }
-  });
+  const f = State.data.flats.find((x) => x.id === id);
+  Modal.confirm(
+    "Delete Flat",
+    `Are you sure you want to delete flat <strong>${f?.flatNo}</strong>? All associated data will be affected.`,
+    async () => {
+      try {
+        await API.delete(`/residents/flats/${id}`);
+        Toast.success("Deleted", "Flat deleted");
+        renderResidents();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 function switchResidentTab(tab) {
-  el('tab-content-flats').classList.toggle('hidden', tab !== 'flats');
-  el('tab-content-residents').classList.toggle('hidden', tab !== 'residents');
-  el('tab-flats').classList.toggle('active', tab === 'flats');
-  el('tab-residents').classList.toggle('active', tab === 'residents');
+  el("tab-content-flats").classList.toggle("hidden", tab !== "flats");
+  el("tab-content-residents").classList.toggle("hidden", tab !== "residents");
+  el("tab-flats").classList.toggle("active", tab === "flats");
+  el("tab-residents").classList.toggle("active", tab === "residents");
 }
 
 function filterFlats() {
-  const search = el('flat-search')?.value.toLowerCase() || '';
-  const block = el('flat-block-filter')?.value || '';
-  const status = el('flat-status-filter')?.value || '';
-  const filtered = State.data.flats.filter(f => {
-    const ms = !search || f.flatNo.toLowerCase().includes(search) || f.block.toLowerCase().includes(search);
+  const search = el("flat-search")?.value.toLowerCase() || "";
+  const block = el("flat-block-filter")?.value || "";
+  const status = el("flat-status-filter")?.value || "";
+  const filtered = State.data.flats.filter((f) => {
+    const ms =
+      !search ||
+      f.flatNo.toLowerCase().includes(search) ||
+      f.block.toLowerCase().includes(search);
     const mb = !block || f.block === block;
     const mst = !status || f.status === status;
     return ms && mb && mst;
   });
-  const grid = el('flats-grid');
+  const grid = el("flats-grid");
   if (grid) grid.innerHTML = renderFlatCards(filtered);
 }
 
 function filterResidents() {
-  const search = el('resident-search')?.value.toLowerCase() || '';
-  const filtered = State.data.residents.filter(r =>
-    !search || r.name.toLowerCase().includes(search) || r.email.toLowerCase().includes(search) || r.phone.includes(search)
+  const search = el("resident-search")?.value.toLowerCase() || "";
+  const filtered = State.data.residents.filter(
+    (r) =>
+      !search ||
+      r.name.toLowerCase().includes(search) ||
+      r.email.toLowerCase().includes(search) ||
+      r.phone.includes(search),
   );
-  const tbody = el('residents-tbody');
+  const tbody = el("residents-tbody");
   if (tbody) tbody.innerHTML = renderResidentRows(filtered, State.data.flats);
 }
 
 // ============ COMPLAINTS PAGE ============
 async function renderComplaints() {
   try {
-    const complaints = await API.get('/complaints' + (State.user.role === 'resident' ? `?residentId=${State.user.id}` : ''));
+    const complaints = await API.get(
+      "/complaints" +
+        (State.user.role === "resident" ? `?residentId=${State.user.id}` : ""),
+    );
     State.data.complaints = complaints;
-    const pc = el('page-content');
+    const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
         <div class="page-header-left">
@@ -1407,14 +1760,24 @@ async function renderComplaints() {
       ${getComplaintModal()}
       ${getComplaintDetailModal()}`;
 
-    setupModalClose('complaint-modal');
-    setupModalClose('complaint-detail-modal');
-  } catch (err) { showError('Failed to load complaints'); }
+    setupModalClose("complaint-modal");
+    setupModalClose("complaint-detail-modal");
+  } catch (err) {
+    showError("Failed to load complaints");
+  }
 }
 
 function renderComplaintCards(complaints) {
-  if (complaints.length === 0) return emptyState('fa-headset', 'No complaints found', 'All quiet here! No complaints have been raised yet.', 'openComplaintModal()');
-  return `<div style="display:flex;flex-direction:column;gap:12px">${complaints.map(c => `
+  if (complaints.length === 0)
+    return emptyState(
+      "fa-headset",
+      "No complaints found",
+      "All quiet here! No complaints have been raised yet.",
+      "openComplaintModal()",
+    );
+  return `<div style="display:flex;flex-direction:column;gap:12px">${complaints
+    .map(
+      (c) => `
     <div class="complaint-card">
       <div class="complaint-card-header">
         <div style="flex:1">
@@ -1431,28 +1794,34 @@ function renderComplaintCards(complaints) {
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div class="text-xs text-muted">${timeAgo(c.createdAt)}</div>
-          ${c.assignedTo ? `<div class="text-xs" style="color:var(--primary-600);margin-top:4px"><i class="fa-solid fa-user-check"></i> ${c.assignedTo}</div>` : ''}
+          ${c.assignedTo ? `<div class="text-xs" style="color:var(--primary-600);margin-top:4px"><i class="fa-solid fa-user-check"></i> ${c.assignedTo}</div>` : ""}
         </div>
       </div>
       <div class="complaint-card-body">
-        <div class="complaint-card-desc">${c.description.substring(0, 120)}${c.description.length > 120 ? '...' : ''}</div>
+        <div class="complaint-card-desc">${c.description.substring(0, 120)}${c.description.length > 120 ? "..." : ""}</div>
       </div>
       <div class="complaint-card-footer">
         <div class="complaint-progress">
           <i class="fa-solid fa-comment" style="color:var(--gray-400)"></i>
-          <span>${c.comments.length} comment${c.comments.length !== 1 ? 's' : ''}</span>
+          <span>${c.comments.length} comment${c.comments.length !== 1 ? "s" : ""}</span>
           <span>·</span>
           <span>${formatDate(c.createdAt)}</span>
         </div>
         <div class="flex gap-2">
           <button class="btn btn-ghost btn-sm" onclick="openComplaintDetail('${c.id}')"><i class="fa-solid fa-eye"></i> View</button>
-          ${State.user.role === 'admin' ? `
+          ${
+            State.user.role === "admin"
+              ? `
             <button class="btn btn-outline-primary btn-sm" onclick="updateComplaintStatus('${c.id}', 'in_progress')">In Progress</button>
-            <button class="btn btn-success btn-sm" onclick="updateComplaintStatus('${c.id}', 'resolved')"><i class="fa-solid fa-check"></i> Resolve</button>` : ''}
+            <button class="btn btn-success btn-sm" onclick="updateComplaintStatus('${c.id}', 'resolved')"><i class="fa-solid fa-check"></i> Resolve</button>`
+              : ""
+          }
           <button class="btn btn-ghost btn-icon btn-sm" onclick="deleteComplaint('${c.id}')" title="Delete"><i class="fa-solid fa-trash" style="color:var(--red-400)"></i></button>
         </div>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`,
+    )
+    .join("")}</div>`;
 }
 
 function getComplaintModal() {
@@ -1508,13 +1877,15 @@ function getComplaintDetailModal() {
   return `<div class="modal-overlay" id="complaint-detail-modal"><div class="modal modal-lg"><div class="modal-header"><span class="modal-title" id="cdm-title">Complaint Details</span><div class="modal-close" onclick="Modal.close('complaint-detail-modal')"><i class="fa-solid fa-times"></i></div></div><div class="modal-body" id="cdm-body"></div></div></div>`;
 }
 
-function openComplaintModal() { Modal.open('complaint-modal'); }
+function openComplaintModal() {
+  Modal.open("complaint-modal");
+}
 
 async function openComplaintDetail(id) {
-  const c = State.data.complaints.find(x => x.id === id);
+  const c = State.data.complaints.find((x) => x.id === id);
   if (!c) return;
-  el('cdm-title').textContent = c.title;
-  el('cdm-body').innerHTML = `
+  el("cdm-title").textContent = c.title;
+  el("cdm-body").innerHTML = `
     <div class="flex items-center gap-3 mb-4">
       <div class="cat-icon cat-${c.category}" style="width:44px;height:44px;font-size:20px;border-radius:var(--radius-md)"><i class="fa-solid ${categoryIcon(c.category)}"></i></div>
       <div style="flex:1">
@@ -1526,32 +1897,40 @@ async function openComplaintDetail(id) {
       <div class="info-item"><div class="info-label">Flat No.</div><div class="info-value">${c.flatNo}</div></div>
       <div class="info-item"><div class="info-label">Reported By</div><div class="info-value">${c.residentName}</div></div>
       <div class="info-item"><div class="info-label">Category</div><div class="info-value" style="text-transform:capitalize">${c.category}</div></div>
-      <div class="info-item"><div class="info-label">Assigned To</div><div class="info-value">${c.assignedTo || 'Not assigned'}</div></div>
+      <div class="info-item"><div class="info-label">Assigned To</div><div class="info-value">${c.assignedTo || "Not assigned"}</div></div>
     </div>
     <div style="background:var(--gray-50);border-radius:var(--radius-md);padding:14px;margin-bottom:20px">
       <div class="info-label mb-2">Description</div>
       <p style="font-size:14px;color:var(--gray-700);line-height:1.7">${c.description}</p>
     </div>
-    ${State.user.role === 'admin' ? `
+    ${
+      State.user.role === "admin"
+        ? `
       <div style="background:var(--primary-50);border:1px solid var(--primary-100);border-radius:var(--radius-md);padding:14px;margin-bottom:20px">
         <div class="info-label mb-2" style="color:var(--primary-700)">Update Status</div>
         <div class="flex gap-2 flex-wrap">
-          ${['open','in_progress','resolved','closed'].map(s => `<button class="btn btn-sm ${c.status===s?'btn-primary':'btn-ghost'}" onclick="updateComplaintStatus('${c.id}','${s}')">${s.replace('_',' ')}</button>`).join('')}
+          ${["open", "in_progress", "resolved", "closed"].map((s) => `<button class="btn btn-sm ${c.status === s ? "btn-primary" : "btn-ghost"}" onclick="updateComplaintStatus('${c.id}','${s}')">${s.replace("_", " ")}</button>`).join("")}
         </div>
         <div class="form-group mt-3">
           <label class="form-label">Assigned To</label>
-          <input type="text" class="form-input" id="cd-assign" value="${c.assignedTo||''}" placeholder="Team or person name">
+          <input type="text" class="form-input" id="cd-assign" value="${c.assignedTo || ""}" placeholder="Team or person name">
           <button class="btn btn-primary btn-sm mt-2" onclick="assignComplaint('${c.id}')"><i class="fa-solid fa-user-check"></i> Assign</button>
         </div>
-      </div>` : ''}
+      </div>`
+        : ""
+    }
     <div class="divider"></div>
     <div class="info-label mb-3">Comments & Updates (${c.comments.length})</div>
     <div class="comment-thread" id="comment-thread-${c.id}">
-      ${c.comments.length === 0 ? '<p class="text-muted text-sm">No comments yet.</p>' :
-        c.comments.map(cm => `
+      ${
+        c.comments.length === 0
+          ? '<p class="text-muted text-sm">No comments yet.</p>'
+          : c.comments
+              .map(
+                (cm) => `
           <div class="comment-item">
             <div class="comment-avatar">${initials(cm.authorName)}</div>
-            <div class="comment-bubble ${cm.role==='admin'?'admin':''}">
+            <div class="comment-bubble ${cm.role === "admin" ? "admin" : ""}">
               <div class="comment-meta">
                 <span class="comment-author">${cm.authorName}</span>
                 <span class="comment-role">${cm.role}</span>
@@ -1559,92 +1938,138 @@ async function openComplaintDetail(id) {
               </div>
               <div class="comment-text">${cm.text}</div>
             </div>
-          </div>`).join('')}
+          </div>`,
+              )
+              .join("")
+      }
     </div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <input type="text" class="form-input" id="new-comment" placeholder="Add a comment or update..." style="flex:1">
       <button class="btn btn-primary" onclick="addComment('${c.id}')"><i class="fa-solid fa-paper-plane"></i></button>
     </div>`;
-  Modal.open('complaint-detail-modal');
+  Modal.open("complaint-detail-modal");
 }
 
 async function submitComplaint() {
-  const title = el('cp-title').value.trim();
-  const category = el('cp-category').value;
-  const priority = el('cp-priority').value;
-  const description = el('cp-desc').value.trim();
-  if (!title || !category || !description) { Toast.error('Validation', 'Please fill all required fields'); return; }
+  const title = el("cp-title").value.trim();
+  const category = el("cp-category").value;
+  const priority = el("cp-priority").value;
+  const description = el("cp-desc").value.trim();
+  if (!title || !category || !description) {
+    Toast.error("Validation", "Please fill all required fields");
+    return;
+  }
   try {
-    const flat = State.data.flats.find(f => f.residents.includes(State.user.id));
-    await API.post('/complaints', { title, description, category, priority, flatId: flat?.id || '', flatNo: flat?.flatNo || 'N/A', residentId: State.user.id, residentName: State.user.name });
-    Toast.success('Submitted', 'Your complaint has been registered');
-    Modal.close('complaint-modal');
+    const flat = State.data.flats.find((f) =>
+      f.residents.includes(State.user.id),
+    );
+    await API.post("/complaints", {
+      title,
+      description,
+      category,
+      priority,
+      flatId: flat?.id || "",
+      flatNo: flat?.flatNo || "N/A",
+      residentId: State.user.id,
+      residentName: State.user.name,
+    });
+    Toast.success("Submitted", "Your complaint has been registered");
+    Modal.close("complaint-modal");
     renderComplaints();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function updateComplaintStatus(id, status) {
   try {
     await API.put(`/complaints/${id}`, { status });
-    Toast.success('Updated', `Complaint status changed to ${status.replace('_',' ')}`);
-    Modal.close('complaint-detail-modal');
+    Toast.success(
+      "Updated",
+      `Complaint status changed to ${status.replace("_", " ")}`,
+    );
+    Modal.close("complaint-detail-modal");
     renderComplaints();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function assignComplaint(id) {
-  const assignedTo = el('cd-assign')?.value.trim();
+  const assignedTo = el("cd-assign")?.value.trim();
   try {
     await API.put(`/complaints/${id}`, { assignedTo });
-    Toast.success('Assigned', 'Complaint assigned successfully');
-  } catch (err) { Toast.error('Error', err.message); }
+    Toast.success("Assigned", "Complaint assigned successfully");
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function addComment(id) {
-  const text = el('new-comment')?.value.trim();
+  const text = el("new-comment")?.value.trim();
   if (!text) return;
   try {
-    await API.post(`/complaints/${id}/comments`, { text, authorId: State.user.id, authorName: State.user.name, role: State.user.role });
-    el('new-comment').value = '';
-    Toast.success('Comment Added', '');
-    Modal.close('complaint-detail-modal');
+    await API.post(`/complaints/${id}/comments`, {
+      text,
+      authorId: State.user.id,
+      authorName: State.user.name,
+      role: State.user.role,
+    });
+    el("new-comment").value = "";
+    Toast.success("Comment Added", "");
+    Modal.close("complaint-detail-modal");
     renderComplaints();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function deleteComplaint(id) {
-  Modal.confirm('Delete Complaint', 'Are you sure you want to delete this complaint?', async () => {
-    try { await API.delete(`/complaints/${id}`); Toast.success('Deleted', ''); renderComplaints(); }
-    catch (err) { Toast.error('Error', err.message); }
-  });
+  Modal.confirm(
+    "Delete Complaint",
+    "Are you sure you want to delete this complaint?",
+    async () => {
+      try {
+        await API.delete(`/complaints/${id}`);
+        Toast.success("Deleted", "");
+        renderComplaints();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 function filterComplaints() {
-  const search = el('comp-search')?.value.toLowerCase() || '';
-  const status = el('comp-status-filter')?.value || '';
-  const cat = el('comp-cat-filter')?.value || '';
-  const filtered = State.data.complaints.filter(c => {
-    const ms = !search || c.title.toLowerCase().includes(search) || c.residentName.toLowerCase().includes(search) || c.flatNo.toLowerCase().includes(search);
+  const search = el("comp-search")?.value.toLowerCase() || "";
+  const status = el("comp-status-filter")?.value || "";
+  const cat = el("comp-cat-filter")?.value || "";
+  const filtered = State.data.complaints.filter((c) => {
+    const ms =
+      !search ||
+      c.title.toLowerCase().includes(search) ||
+      c.residentName.toLowerCase().includes(search) ||
+      c.flatNo.toLowerCase().includes(search);
     const mst = !status || c.status === status;
     const mc = !cat || c.category === cat;
     return ms && mst && mc;
   });
-  el('complaints-list').innerHTML = renderComplaintCards(filtered);
+  el("complaints-list").innerHTML = renderComplaintCards(filtered);
 }
 
 // ============ NOTICES PAGE ============
 async function renderNotices() {
   try {
-    const notices = await API.get('/notices');
+    const notices = await API.get("/notices");
     State.data.notices = notices;
-    const pc = el('page-content');
+    const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
         <div class="page-header-left">
           <h1 class="page-title">Notice Board</h1>
           <p class="page-subtitle">${notices.length} active announcements</p>
         </div>
-        ${State.user.role === 'admin' ? `<button class="btn btn-primary btn-sm" onclick="openNoticeModal()"><i class="fa-solid fa-plus"></i> Post Notice</button>` : ''}
+        ${State.user.role === "admin" ? `<button class="btn btn-primary btn-sm" onclick="openNoticeModal()"><i class="fa-solid fa-plus"></i> Post Notice</button>` : ""}
       </div>
 
       <div class="filter-bar">
@@ -1663,14 +2088,23 @@ async function renderNotices() {
       ${getNoticeModal()}
       ${getNoticeDetailModal()}`;
 
-    setupModalClose('notice-modal');
-    setupModalClose('notice-detail-modal');
-  } catch (err) { showError('Failed to load notices'); }
+    setupModalClose("notice-modal");
+    setupModalClose("notice-detail-modal");
+  } catch (err) {
+    showError("Failed to load notices");
+  }
 }
 
 function renderNoticeCards(notices) {
-  if (notices.length === 0) return emptyState('fa-bullhorn', 'No notices posted', 'All announcements from the society committee will appear here.');
-  return notices.map(n => `
+  if (notices.length === 0)
+    return emptyState(
+      "fa-bullhorn",
+      "No notices posted",
+      "All announcements from the society committee will appear here.",
+    );
+  return notices
+    .map(
+      (n) => `
     <div class="notice-card ${n.priority}" onclick="openNoticeDetail('${n.id}')">
       <div class="notice-card-header">
         <div class="notice-card-title">${n.title}</div>
@@ -1678,16 +2112,22 @@ function renderNoticeCards(notices) {
           <span class="badge badge-${n.priority}">${n.priority}</span>
         </div>
       </div>
-      <div class="notice-preview">${n.content.substring(0, 160)}${n.content.length > 160 ? '...' : ''}</div>
+      <div class="notice-preview">${n.content.substring(0, 160)}${n.content.length > 160 ? "..." : ""}</div>
       <div class="notice-card-meta">
         <span><i class="fa-solid fa-user"></i> ${n.authorName}</span>
         <span><i class="fa-solid fa-calendar"></i> ${formatDate(n.createdAt)}</span>
         <span><i class="fa-solid fa-check-double"></i> ${n.acknowledgedBy.length} acknowledged</span>
         <span class="badge" style="background:var(--primary-50);color:var(--primary-600);margin-left:auto">${n.category}</span>
-        ${State.user.role === 'admin' ? `
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteNotice('${n.id}')" style="margin-left:8px;color:var(--red-500)"><i class="fa-solid fa-trash"></i></button>` : ''}
+        ${
+          State.user.role === "admin"
+            ? `
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteNotice('${n.id}')" style="margin-left:8px;color:var(--red-500)"><i class="fa-solid fa-trash"></i></button>`
+            : ""
+        }
       </div>
-    </div>`).join('');
+    </div>`,
+    )
+    .join("");
 }
 
 function getNoticeModal() {
@@ -1740,13 +2180,15 @@ function getNoticeDetailModal() {
   return `<div class="modal-overlay" id="notice-detail-modal"><div class="modal modal-lg"><div class="modal-header"><span class="modal-title" id="ndm-title"></span><div class="modal-close" onclick="Modal.close('notice-detail-modal')"><i class="fa-solid fa-times"></i></div></div><div class="modal-body" id="ndm-body"></div></div></div>`;
 }
 
-function openNoticeModal() { Modal.open('notice-modal'); }
+function openNoticeModal() {
+  Modal.open("notice-modal");
+}
 
 function openNoticeDetail(id) {
-  const n = State.data.notices.find(x => x.id === id);
+  const n = State.data.notices.find((x) => x.id === id);
   if (!n) return;
-  el('ndm-title').textContent = n.title;
-  el('ndm-body').innerHTML = `
+  el("ndm-title").textContent = n.title;
+  el("ndm-body").innerHTML = `
     <div class="flex items-center gap-2 mb-4">
       <span class="badge badge-${n.priority}">${n.priority}</span>
       <span class="badge" style="background:var(--primary-50);color:var(--primary-600)">${n.category}</span>
@@ -1761,72 +2203,108 @@ function openNoticeDetail(id) {
         <div class="text-xs text-muted">acknowledged</div>
       </div>
     </div>
-    ${State.user.role === 'resident' && !n.acknowledgedBy.includes(State.user.id) ? `
-      <button class="btn btn-success w-full mt-3" onclick="acknowledgeNotice('${n.id}')"><i class="fa-solid fa-check"></i> Mark as Read & Acknowledge</button>` :
-      State.user.role === 'resident' ? `<div class="text-center text-sm" style="color:var(--green-600);padding:12px"><i class="fa-solid fa-check-circle"></i> You have acknowledged this notice</div>` : ''}`;
-  Modal.open('notice-detail-modal');
+    ${
+      State.user.role === "resident" &&
+      !n.acknowledgedBy.includes(State.user.id)
+        ? `
+      <button class="btn btn-success w-full mt-3" onclick="acknowledgeNotice('${n.id}')"><i class="fa-solid fa-check"></i> Mark as Read & Acknowledge</button>`
+        : State.user.role === "resident"
+          ? `<div class="text-center text-sm" style="color:var(--green-600);padding:12px"><i class="fa-solid fa-check-circle"></i> You have acknowledged this notice</div>`
+          : ""
+    }`;
+  Modal.open("notice-detail-modal");
 }
 
 async function submitNotice() {
-  const title = el('n-title').value.trim();
-  const content = el('n-content').value.trim();
-  const category = el('n-category').value;
-  const priority = el('n-priority').value;
-  if (!title || !content) { Toast.error('Validation', 'Title and content are required'); return; }
+  const title = el("n-title").value.trim();
+  const content = el("n-content").value.trim();
+  const category = el("n-category").value;
+  const priority = el("n-priority").value;
+  if (!title || !content) {
+    Toast.error("Validation", "Title and content are required");
+    return;
+  }
   try {
-    await API.post('/notices', { title, content, category, priority, authorId: State.user.id, authorName: State.user.name });
-    Toast.success('Posted', 'Notice published to all residents');
-    Modal.close('notice-modal');
+    await API.post("/notices", {
+      title,
+      content,
+      category,
+      priority,
+      authorId: State.user.id,
+      authorName: State.user.name,
+    });
+    Toast.success("Posted", "Notice published to all residents");
+    Modal.close("notice-modal");
     renderNotices();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function acknowledgeNotice(id) {
   try {
     await API.post(`/notices/${id}/acknowledge`, { userId: State.user.id });
-    Toast.success('Acknowledged', 'Notice marked as read');
-    Modal.close('notice-detail-modal');
+    Toast.success("Acknowledged", "Notice marked as read");
+    Modal.close("notice-detail-modal");
     renderNotices();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function deleteNotice(id) {
-  Modal.confirm('Remove Notice', 'This notice will be hidden from all residents.', async () => {
-    try { await API.delete(`/notices/${id}`); Toast.success('Removed', 'Notice removed'); renderNotices(); }
-    catch (err) { Toast.error('Error', err.message); }
-  });
+  Modal.confirm(
+    "Remove Notice",
+    "This notice will be hidden from all residents.",
+    async () => {
+      try {
+        await API.delete(`/notices/${id}`);
+        Toast.success("Removed", "Notice removed");
+        renderNotices();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 function filterNoticesByPriority(event, priority) {
-  qsa('.tabs .tab').forEach(t => t.classList.toggle('active', t === event.target));
-  const filtered = !priority ? State.data.notices : State.data.notices.filter(n => n.priority === priority);
-  el('notices-list').innerHTML = renderNoticeCards(filtered);
+  qsa(".tabs .tab").forEach((t) =>
+    t.classList.toggle("active", t === event.target),
+  );
+  const filtered = !priority
+    ? State.data.notices
+    : State.data.notices.filter((n) => n.priority === priority);
+  el("notices-list").innerHTML = renderNoticeCards(filtered);
 }
 
 // ============ BILLING PAGE ============
 async function renderBilling() {
   try {
-    const endpoint = State.user.role === 'resident' ? `/billing?residentId=${State.user.id}` : '/billing';
+    const endpoint =
+      State.user.role === "resident"
+        ? `/billing?residentId=${State.user.id}`
+        : "/billing";
     const [bills, stats] = await Promise.all([
       API.get(endpoint),
-      API.get('/billing/stats')
+      API.get("/billing/stats"),
     ]);
     State.data.bills = bills;
-    const pc = el('page-content');
+    const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
         <div class="page-header-left">
           <h1 class="page-title">Maintenance Billing</h1>
           <p class="page-subtitle">Track and manage society dues</p>
         </div>
-        ${State.user.role === 'admin' ? `<button class="btn btn-primary btn-sm" onclick="openGenerateBillsModal()"><i class="fa-solid fa-file-circle-plus"></i> Generate Bills</button>` : ''}
+        ${State.user.role === "admin" ? `<button class="btn btn-primary btn-sm" onclick="openGenerateBillsModal()"><i class="fa-solid fa-file-circle-plus"></i> Generate Bills</button>` : ""}
       </div>
 
       <div class="stats-grid" style="margin-bottom:24px">
-        ${statCard('Total Collected', formatCurrency(stats.totalRevenue), 'fa-indian-rupee-sign', 'green', `${stats.paid} bills paid`, 'up')}
-        ${statCard('Pending Amount', formatCurrency(stats.pendingRevenue), 'fa-clock', 'orange', `${stats.unpaid} bills unpaid`, 'down')}
-        ${statCard('Overdue Bills', stats.overdue, 'fa-triangle-exclamation', stats.overdue > 0 ? 'red' : 'green', 'Past due date', stats.overdue > 0 ? 'down' : 'neutral')}
-        ${statCard('Total Bills', stats.totalBills, 'fa-file-invoice', 'indigo', 'All time generated', 'neutral')}
+        ${statCard("Total Collected", formatCurrency(stats.totalRevenue), "fa-indian-rupee-sign", "green", `${stats.paid} bills paid`, "up")}
+        ${statCard("Pending Amount", formatCurrency(stats.pendingRevenue), "fa-clock", "orange", `${stats.unpaid} bills unpaid`, "down")}
+        ${statCard("Overdue Bills", stats.overdue, "fa-triangle-exclamation", stats.overdue > 0 ? "red" : "green", "Past due date", stats.overdue > 0 ? "down" : "neutral")}
+        ${statCard("Total Bills", stats.totalBills, "fa-file-invoice", "indigo", "All time generated", "neutral")}
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -1855,32 +2333,43 @@ async function renderBilling() {
       ${getGenerateBillsModal()}
       ${getPayBillModal()}`;
 
-    setupModalClose('generate-bills-modal');
-    setupModalClose('pay-bill-modal');
-  } catch (err) { showError('Failed to load billing'); }
+    setupModalClose("generate-bills-modal");
+    setupModalClose("pay-bill-modal");
+  } catch (err) {
+    showError("Failed to load billing");
+  }
 }
 
 function renderBillCards(bills) {
-  if (bills.length === 0) return emptyState('fa-file-invoice', 'No bills found', 'Bills will appear here once generated for the month.');
-  return bills.map(b => `
+  if (bills.length === 0)
+    return emptyState(
+      "fa-file-invoice",
+      "No bills found",
+      "Bills will appear here once generated for the month.",
+    );
+  return bills
+    .map(
+      (b) => `
     <div class="bill-card ${b.status}">
       <div class="bill-info">
         <div class="bill-flat">Flat ${b.flatNo}</div>
-        <div class="bill-month">${b.residentName} · ${new Date(b.month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</div>
+        <div class="bill-month">${b.residentName} · ${new Date(b.month + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</div>
         <div style="margin-top:8px;font-size:12px;color:var(--gray-500)">
           Maintenance: ${formatCurrency(b.maintenanceAmount)} + Water: ${formatCurrency(b.waterCharges)}
-          ${b.parkingCharges > 0 ? ` + Parking: ${formatCurrency(b.parkingCharges)}` : ''}
-          ${b.penalty > 0 ? ` + Penalty: ${formatCurrency(b.penalty)}` : ''}
+          ${b.parkingCharges > 0 ? ` + Parking: ${formatCurrency(b.parkingCharges)}` : ""}
+          ${b.penalty > 0 ? ` + Penalty: ${formatCurrency(b.penalty)}` : ""}
         </div>
       </div>
       <div class="bill-amount">
         ${statusBadge(b.status)}
         <div class="bill-total mt-2">${formatCurrency(b.totalAmount)}</div>
         <div class="bill-due">Due: ${formatDate(b.dueDate)}</div>
-        ${b.status === 'paid' ? `<div class="text-xs" style="color:var(--green-600)"><i class="fa-solid fa-check-circle"></i> Paid ${formatDate(b.paidDate)} via ${b.paymentMethod}</div>` : ''}
-        ${b.status !== 'paid' ? `<button class="btn btn-primary btn-sm mt-2" onclick="openPayBillModal('${b.id}')"><i class="fa-solid fa-credit-card"></i> Pay Now</button>` : ''}
+        ${b.status === "paid" ? `<div class="text-xs" style="color:var(--green-600)"><i class="fa-solid fa-check-circle"></i> Paid ${formatDate(b.paidDate)} via ${b.paymentMethod}</div>` : ""}
+        ${b.status !== "paid" ? `<button class="btn btn-primary btn-sm mt-2" onclick="openPayBillModal('${b.id}')"><i class="fa-solid fa-credit-card"></i> Pay Now</button>` : ""}
       </div>
-    </div>`).join('');
+    </div>`,
+    )
+    .join("");
 }
 
 function getGenerateBillsModal() {
@@ -1960,77 +2449,95 @@ function getPayBillModal() {
 
 function openGenerateBillsModal() {
   const now = new Date();
-  el('gb-month').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  Modal.open('generate-bills-modal');
+  el("gb-month").value =
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  Modal.open("generate-bills-modal");
 }
 
 function openPayBillModal(id) {
-  const bill = State.data.bills.find(b => b.id === id);
+  const bill = State.data.bills.find((b) => b.id === id);
   if (!bill) return;
-  el('pb-bill-id').value = id;
-  el('pb-bill-info').innerHTML = `
+  el("pb-bill-id").value = id;
+  el("pb-bill-info").innerHTML = `
     <div class="flex justify-between"><span class="text-muted text-sm">Flat</span><span class="font-semibold">${bill.flatNo}</span></div>
-    <div class="flex justify-between mt-1"><span class="text-muted text-sm">Month</span><span>${new Date(bill.month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</span></div>
+    <div class="flex justify-between mt-1"><span class="text-muted text-sm">Month</span><span>${new Date(bill.month + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</span></div>
     <div class="flex justify-between mt-2" style="border-top:1px solid var(--gray-200);padding-top:10px"><span class="font-semibold">Total Amount</span><span style="font-size:20px;font-weight:700;color:var(--primary-600)">${formatCurrency(bill.totalAmount)}</span></div>`;
-  Modal.open('pay-bill-modal');
+  Modal.open("pay-bill-modal");
 }
 
 async function generateBills() {
-  const month = el('gb-month').value;
-  const maintenanceAmount = parseInt(el('gb-maintenance').value);
-  const waterCharges = parseInt(el('gb-water').value);
-  const parkingCharges = parseInt(el('gb-parking').value);
-  if (!month) { Toast.error('Validation', 'Please select a month'); return; }
+  const month = el("gb-month").value;
+  const maintenanceAmount = parseInt(el("gb-maintenance").value);
+  const waterCharges = parseInt(el("gb-water").value);
+  const parkingCharges = parseInt(el("gb-parking").value);
+  if (!month) {
+    Toast.error("Validation", "Please select a month");
+    return;
+  }
   try {
-    const res = await API.post('/billing/generate', { month, maintenanceAmount, waterCharges, parkingCharges });
-    Toast.success('Bills Generated', `${res.generated} bills created for ${month}`);
-    Modal.close('generate-bills-modal');
+    const res = await API.post("/billing/generate", {
+      month,
+      maintenanceAmount,
+      waterCharges,
+      parkingCharges,
+    });
+    Toast.success(
+      "Bills Generated",
+      `${res.generated} bills created for ${month}`,
+    );
+    Modal.close("generate-bills-modal");
     renderBilling();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function payBill() {
-  const id = el('pb-bill-id').value;
-  const paymentMethod = el('pb-method').value;
-  const transactionId = el('pb-txn').value;
+  const id = el("pb-bill-id").value;
+  const paymentMethod = el("pb-method").value;
+  const transactionId = el("pb-txn").value;
   try {
     await API.put(`/billing/${id}/pay`, { paymentMethod, transactionId });
-    Toast.success('Payment Recorded', 'Bill marked as paid successfully');
-    Modal.close('pay-bill-modal');
+    Toast.success("Payment Recorded", "Bill marked as paid successfully");
+    Modal.close("pay-bill-modal");
     renderBilling();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 function filterBills() {
-  const status = el('bill-status-filter')?.value || '';
-  const month = el('bill-month-filter')?.value || '';
-  const filtered = State.data.bills.filter(b => {
+  const status = el("bill-status-filter")?.value || "";
+  const month = el("bill-month-filter")?.value || "";
+  const filtered = State.data.bills.filter((b) => {
     const ms = !status || b.status === status;
     const mm = !month || b.month === month;
     return ms && mm;
   });
-  el('bills-list').innerHTML = renderBillCards(filtered);
+  el("bills-list").innerHTML = renderBillCards(filtered);
 }
 
 // ============ SECURITY PANEL ============
 async function renderSecurity() {
   try {
     const [visitors, flats] = await Promise.all([
-      API.get('/visitors/today'),
-      API.get('/residents/flats/all')
+      API.get("/visitors/today"),
+      API.get("/residents/flats/all"),
     ]);
     State.data.visitors = visitors;
     State.data.flats = flats;
 
-    const pending = visitors.filter(v => v.status === 'pending');
-    const approved = visitors.filter(v => v.status === 'approved' || v.status === 'exited');
+    const pending = visitors.filter((v) => v.status === "pending");
+    const approved = visitors.filter(
+      (v) => v.status === "approved" || v.status === "exited",
+    );
 
-    const pc = el('page-content');
+    const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
         <div class="page-header-left">
           <h1 class="page-title"><i class="fa-solid fa-shield-halved" style="color:var(--primary-500)"></i> Security Panel</h1>
-          <p class="page-subtitle">Gate management · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
+          <p class="page-subtitle">Gate management · ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</p>
         </div>
         <div class="flex gap-2">
           <div style="background:var(--orange-100);color:var(--orange-700);padding:8px 16px;border-radius:var(--radius-md);font-size:14px;font-weight:600">
@@ -2059,7 +2566,13 @@ async function renderSecurity() {
                 <label class="form-label">Visiting Flat <span class="required">*</span></label>
                 <select class="form-input" id="sg-flat">
                   <option value="">Select flat...</option>
-                  ${flats.filter(f => f.status === 'occupied').map(f => `<option value="${f.id}">${f.flatNo} — ${f.owner ? f.owner.name : 'Resident'}</option>`).join('')}
+                  ${flats
+                    .filter((f) => f.status === "occupied")
+                    .map(
+                      (f) =>
+                        `<option value="${f.id}">${f.flatNo} — ${f.owner ? f.owner.name : "Resident"}</option>`,
+                    )
+                    .join("")}
                 </select>
               </div>
               <div class="form-group">
@@ -2084,15 +2597,19 @@ async function renderSecurity() {
         </div>
 
         <div>
-          ${pending.length > 0 ? `
+          ${
+            pending.length > 0
+              ? `
             <div class="card" style="margin-bottom:16px;border:2px solid var(--orange-300)">
               <div class="card-header" style="background:var(--orange-50)">
                 <span class="card-title" style="color:var(--orange-700)"><i class="fa-solid fa-clock-rotate-left"></i> Awaiting Approval (${pending.length})</span>
               </div>
               <div class="card-body" style="padding:12px;display:flex;flex-direction:column;gap:10px">
-                ${pending.map(v => renderSecurityVisitorCard(v, true)).join('')}
+                ${pending.map((v) => renderSecurityVisitorCard(v, true)).join("")}
               </div>
-            </div>` : ''}
+            </div>`
+              : ""
+          }
 
           <div class="card">
             <div class="card-header">
@@ -2101,19 +2618,26 @@ async function renderSecurity() {
             </div>
             <div class="card-body" style="padding:12px">
               <div class="visitor-live-list">
-                ${approved.length === 0 ? '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:36px">👮</div><p class="text-muted text-sm">No visitors logged today</p></div>' :
-                  approved.map(v => renderSecurityVisitorCard(v, false)).join('')}
+                ${
+                  approved.length === 0
+                    ? '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:36px">👮</div><p class="text-muted text-sm">No visitors logged today</p></div>'
+                    : approved
+                        .map((v) => renderSecurityVisitorCard(v, false))
+                        .join("")
+                }
               </div>
             </div>
           </div>
         </div>
       </div>`;
-  } catch (err) { showError('Failed to load security panel'); }
+  } catch (err) {
+    showError("Failed to load security panel");
+  }
 }
 
 function renderSecurityVisitorCard(v, isPending) {
   return `
-    <div class="visitor-quick-card ${isPending ? 'pending' : ''}">
+    <div class="visitor-quick-card ${isPending ? "pending" : ""}">
       <div class="visitor-card-header">
         <div>
           <div class="visitor-name">${v.name}</div>
@@ -2124,42 +2648,81 @@ function renderSecurityVisitorCard(v, isPending) {
       <div class="visitor-meta">
         <div class="visitor-meta-item"><i class="fa-solid fa-building"></i> Flat ${v.flatNo} — ${v.residentName}</div>
         <div class="visitor-meta-item"><i class="fa-solid fa-tag"></i> ${v.purpose}</div>
-        ${v.entryTime ? `<div class="visitor-meta-item"><i class="fa-solid fa-clock"></i> In: ${formatTime(v.entryTime)}</div>` : ''}
-        ${v.exitTime ? `<div class="visitor-meta-item"><i class="fa-solid fa-door-open"></i> Out: ${formatTime(v.exitTime)}</div>` : ''}
+        ${v.entryTime ? `<div class="visitor-meta-item"><i class="fa-solid fa-clock"></i> In: ${formatTime(v.entryTime)}</div>` : ""}
+        ${v.exitTime ? `<div class="visitor-meta-item"><i class="fa-solid fa-door-open"></i> Out: ${formatTime(v.exitTime)}</div>` : ""}
       </div>
-      ${isPending ? `
+      ${
+        isPending
+          ? `
         <div class="visitor-actions">
           <button class="btn btn-success flex-1" onclick="approveVisitorSec('${v.id}')"><i class="fa-solid fa-check"></i> Approve</button>
           <button class="btn btn-danger flex-1" onclick="rejectVisitorSec('${v.id}')"><i class="fa-solid fa-times"></i> Reject</button>
-        </div>` :
-        v.status === 'approved' ? `
+        </div>`
+          : v.status === "approved"
+            ? `
         <div class="visitor-actions">
           <button class="btn btn-ghost flex-1" onclick="exitVisitorSec('${v.id}')"><i class="fa-solid fa-door-open"></i> Log Exit</button>
-        </div>` : ''}
+        </div>`
+            : ""
+      }
     </div>`;
 }
 
 async function logVisitorSecurity(isDirect) {
-  const name = el('sg-name').value.trim();
-  const phone = el('sg-phone').value.trim();
-  const flatId = el('sg-flat').value;
-  const purpose = el('sg-purpose').value;
-  const vehicleNo = el('sg-vehicle').value.trim();
-  if (!name || !phone || !flatId || !purpose) { Toast.error('Validation', 'Please fill all required fields'); return; }
-  if (!/^\d{10}$/.test(phone)) { Toast.error('Invalid Phone', 'Enter a valid 10-digit phone number'); return; }
+  const name = el("sg-name").value.trim();
+  const phone = el("sg-phone").value.trim();
+  const flatId = el("sg-flat").value;
+  const purpose = el("sg-purpose").value;
+  const vehicleNo = el("sg-vehicle").value.trim();
+  if (!name || !phone || !flatId || !purpose) {
+    Toast.error("Validation", "Please fill all required fields");
+    return;
+  }
+  if (!/^\d{10}$/.test(phone)) {
+    Toast.error("Invalid Phone", "Enter a valid 10-digit phone number");
+    return;
+  }
   try {
-    await API.post('/visitors', { name, phone, purpose, flatId, vehicleNo, isPreApproved: isDirect, guardId: State.user.id });
-    Toast.success(isDirect ? 'Entry Logged' : 'Approval Requested', isDirect ? `${name} has entered` : `Waiting for resident approval`);
-    el('sg-name').value = ''; el('sg-phone').value = ''; el('sg-flat').value = ''; el('sg-purpose').value = ''; el('sg-vehicle').value = '';
+    await API.post("/visitors", {
+      name,
+      phone,
+      purpose,
+      flatId,
+      vehicleNo,
+      isPreApproved: isDirect,
+      guardId: State.user.id,
+    });
+    Toast.success(
+      isDirect ? "Entry Logged" : "Approval Requested",
+      isDirect ? `${name} has entered` : `Waiting for resident approval`,
+    );
+    el("sg-name").value = "";
+    el("sg-phone").value = "";
+    el("sg-flat").value = "";
+    el("sg-purpose").value = "";
+    el("sg-vehicle").value = "";
     renderSecurity();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
-async function approveVisitorSec(id) { await approveVisitor(id); renderSecurity(); }
-async function rejectVisitorSec(id) { await rejectVisitor(id); renderSecurity(); }
+async function approveVisitorSec(id) {
+  await approveVisitor(id);
+  renderSecurity();
+}
+async function rejectVisitorSec(id) {
+  await rejectVisitor(id);
+  renderSecurity();
+}
 async function exitVisitorSec(id) {
-  try { await API.put(`/visitors/${id}/exit`, {}); Toast.info('Exit Logged', 'Visitor exit recorded'); renderSecurity(); }
-  catch (err) { Toast.error('Error', err.message); }
+  try {
+    await API.put(`/visitors/${id}/exit`, {});
+    Toast.info("Exit Logged", "Visitor exit recorded");
+    renderSecurity();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 // ============ HELPERS ============
@@ -2168,70 +2731,75 @@ function emptyState(icon, title, text, btnAction) {
     <div class="empty-state">
       <div class="empty-state-icon"><i class="fa-solid ${icon}"></i></div>
       <div class="empty-state-title">${title}</div>
-      ${text ? `<p class="empty-state-text">${text}</p>` : ''}
-      ${btnAction ? `<button class="btn btn-primary" onclick="${btnAction}"><i class="fa-solid fa-plus"></i> Get Started</button>` : ''}
+      ${text ? `<p class="empty-state-text">${text}</p>` : ""}
+      ${btnAction ? `<button class="btn btn-primary" onclick="${btnAction}"><i class="fa-solid fa-plus"></i> Get Started</button>` : ""}
     </div>`;
 }
 
 function showError(msg) {
-  const pc = el('page-content');
-  if (pc) pc.innerHTML = `
+  const pc = el("page-content");
+  if (pc)
+    pc.innerHTML = `
     <div class="empty-state" style="padding:80px 20px">
       <div class="empty-state-icon" style="color:var(--red-400)"><i class="fa-solid fa-circle-exclamation"></i></div>
       <div class="empty-state-title">Something went wrong</div>
       <p class="empty-state-text">${msg}. Please try refreshing the page.</p>
       <button class="btn btn-primary" onclick="navigateTo('${State.currentPage}')"><i class="fa-solid fa-rotate-right"></i> Retry</button>
     </div>`;
-  Toast.error('Error', msg);
+  Toast.error("Error", msg);
 }
 
 function setupModalClose(id) {
   const overlay = el(id);
   if (overlay) {
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) Modal.close(id); });
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) Modal.close(id);
+    });
   }
 }
 
 // ============ INIT ============
 function init() {
-  console.log('=== INITIALIZING APP ===');
-  const savedToken = localStorage.getItem('gh_token');
-  const savedUser = localStorage.getItem('gh_user');
-  
-  console.log('Saved Token:', savedToken ? 'EXISTS' : 'NOT FOUND');
-  console.log('Saved User:', savedUser ? savedUser : 'NOT FOUND');
+  console.log("=== INITIALIZING APP ===");
+  const savedToken = localStorage.getItem("gh_token");
+  const savedUser = localStorage.getItem("gh_user");
+
+  console.log("Saved Token:", savedToken ? "EXISTS" : "NOT FOUND");
+  console.log("Saved User:", savedUser ? savedUser : "NOT FOUND");
 
   if (savedToken && savedUser) {
     State.token = savedToken;
     try {
       State.user = JSON.parse(savedUser);
-      console.log('✅ User parsed successfully:', State.user);
-      console.log('User role:', State.user.role);
-      
+      console.log("✅ User parsed successfully:", State.user);
+      console.log("User role:", State.user.role);
+
       // Trust the saved session and render immediately
       // (Backend doesn't have /auth/me endpoint, so we skip verification)
-      if (State.user.role === 'super_admin' || State.user.role === 'superadmin') {
-        console.log('👑 Rendering Super Admin App...');
+      if (
+        State.user.role === "super_admin" ||
+        State.user.role === "superadmin"
+      ) {
+        console.log("👑 Rendering Super Admin App...");
         renderSuperAdminApp();
       } else {
-        console.log('🏠 Rendering Regular App...');
+        console.log("🏠 Rendering Regular App...");
         renderApp();
       }
-      
-      console.log('✅ Session restored successfully from localStorage');
-      
-    } catch(e) { 
+
+      console.log("✅ Session restored successfully from localStorage");
+    } catch (e) {
       // Failed to parse user data
-      console.error('❌ Failed to restore session:', e);
-      localStorage.removeItem('gh_token');
-      localStorage.removeItem('gh_user');
+      console.error("❌ Failed to restore session:", e);
+      localStorage.removeItem("gh_token");
+      localStorage.removeItem("gh_user");
       State.token = null;
       State.user = null;
       renderLogin();
     }
   } else {
     // No session — show login page
-    console.log('ℹ️ No session found, showing login');
+    console.log("ℹ️ No session found, showing login");
     renderLogin();
   }
 }
@@ -2242,46 +2810,47 @@ function init() {
 
 function renderLanding() {
   // Navigate back to the main website
-  window.location.href = '/';
+  window.location.href = "/";
 }
 
 function scrollToSection(id) {
   const section = document.getElementById(id);
-  if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function submitSocietyRegistration(e) {
   e.preventDefault();
-  const btn = el('reg-submit-btn');
+  const btn = el("reg-submit-btn");
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
   const body = {
-    societyName: el('reg-society-name').value.trim(),
-    address: el('reg-address').value.trim(),
-    city: el('reg-city').value.trim(),
-    state: el('reg-state').value.trim(),
-    towers: el('reg-towers').value,
-    totalFlats: el('reg-flats').value,
-    contactName: el('reg-contact-name').value.trim(),
-    contactEmail: el('reg-email').value.trim(),
-    contactPhone: el('reg-phone').value.trim(),
-    gst: el('reg-gst').value.trim(),
-    pan: el('reg-pan').value.trim(),
-    message: el('reg-message').value.trim()
+    societyName: el("reg-society-name").value.trim(),
+    address: el("reg-address").value.trim(),
+    city: el("reg-city").value.trim(),
+    state: el("reg-state").value.trim(),
+    towers: el("reg-towers").value,
+    totalFlats: el("reg-flats").value,
+    contactName: el("reg-contact-name").value.trim(),
+    contactEmail: el("reg-email").value.trim(),
+    contactPhone: el("reg-phone").value.trim(),
+    gst: el("reg-gst").value.trim(),
+    pan: el("reg-pan").value.trim(),
+    message: el("reg-message").value.trim(),
   };
 
   if (!/^\d{10}$/.test(body.contactPhone)) {
-    Toast.error('Invalid Phone', 'Please enter a valid 10-digit mobile number');
+    Toast.error("Invalid Phone", "Please enter a valid 10-digit mobile number");
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Registration';
+    btn.innerHTML =
+      '<i class="fa-solid fa-paper-plane"></i> Submit Registration';
     return;
   }
 
   try {
-    const res = await API.post('/superadmin/registrations', body);
+    const res = await API.post("/public/society-registrations", body);
     // Show success state
-    el('register-form-body').innerHTML = `
+    el("register-form-body").innerHTML = `
       <div class="register-success">
         <div class="register-success-icon"><i class="fa-solid fa-circle-check"></i></div>
         <h3>Registration Submitted!</h3>
@@ -2293,16 +2862,20 @@ async function submitSocietyRegistration(e) {
           <i class="fa-solid fa-arrow-left"></i> Back to Home
         </button>
       </div>`;
-    Toast.success('Registration Submitted!', 'We will contact you within 24 hours.');
+    Toast.success(
+      "Registration Submitted!",
+      "We will contact you within 24 hours.",
+    );
     // Animate the steps
-    const steps = document.querySelectorAll('.register-step-item');
+    const steps = document.querySelectorAll(".register-step-item");
     steps.forEach((s, i) => {
-      setTimeout(() => s.classList.add('active-step'), i * 180);
+      setTimeout(() => s.classList.add("active-step"), i * 180);
     });
   } catch (err) {
-    Toast.error('Submission Failed', err.message);
+    Toast.error("Submission Failed", err.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Registration';
+    btn.innerHTML =
+      '<i class="fa-solid fa-paper-plane"></i> Submit Registration';
   }
 }
 
@@ -2311,8 +2884,8 @@ async function submitSocietyRegistration(e) {
 // ============================================================
 
 function renderSuperAdminApp() {
-  document.title = 'Super Admin — MyGateBell';
-  State.saPage = State.saPage || 'sa-dashboard';
+  document.title = "Super Admin — MyGateBell";
+  State.saPage = State.saPage || "sa-dashboard";
 
   document.body.innerHTML = `
     <div class="superadmin-layout">
@@ -2326,26 +2899,30 @@ function renderSuperAdminApp() {
         </div>
         <nav class="sa-nav">
           <div class="sa-nav-section-label">Overview</div>
-          <div class="sa-nav-item ${State.saPage==='sa-dashboard'?'active':''}" onclick="saNavigate('sa-dashboard')">
+          <div class="sa-nav-item ${State.saPage === "sa-dashboard" ? "active" : ""}" onclick="saNavigate('sa-dashboard')">
             <i class="fa-solid fa-chart-pie"></i> Dashboard
           </div>
           <div class="sa-nav-section-label" style="margin-top:8px">Societies</div>
-          <div class="sa-nav-item ${State.saPage==='sa-societies'?'active':''}" onclick="saNavigate('sa-societies')">
+          <div class="sa-nav-item ${State.saPage === "sa-registrations" ? "active" : ""}" onclick="saNavigate('sa-registrations')">
+            <i class="fa-solid fa-inbox"></i> Registrations
+            <span class="sa-nav-badge" id="sa-badge-regs">—</span>
+          </div>
+          <div class="sa-nav-item ${State.saPage === "sa-societies" ? "active" : ""}" onclick="saNavigate('sa-societies')">
             <i class="fa-solid fa-building"></i> All Societies
           </div>
-          <div class="sa-nav-item ${State.saPage==='sa-add-society'?'active':''}" onclick="saNavigate('sa-add-society')">
+          <div class="sa-nav-item ${State.saPage === "sa-add-society" ? "active" : ""}" onclick="saNavigate('sa-add-society')">
             <i class="fa-solid fa-plus-circle"></i> Add Society
           </div>
           <div class="sa-nav-section-label" style="margin-top:8px">Administration</div>
-          <div class="sa-nav-item ${State.saPage==='sa-admins'?'active':''}" onclick="saNavigate('sa-admins')">
+          <div class="sa-nav-item ${State.saPage === "sa-admins" ? "active" : ""}" onclick="saNavigate('sa-admins')">
             <i class="fa-solid fa-users-gear"></i> Society Admins
           </div>
         </nav>
         <div class="sa-sidebar-footer">
           <div class="sa-user-card" onclick="doLogout()">
-            <div class="sa-user-avatar">${initials(State.user?.name || 'Admin')}</div>
+            <div class="sa-user-avatar">${initials(State.user?.name || "Admin")}</div>
             <div>
-              <div class="sa-user-name">${State.user?.name || 'Super Admin'}</div>
+              <div class="sa-user-name">${State.user?.name || "Super Admin"}</div>
               <div class="sa-user-role">Super Administrator</div>
             </div>
             <i class="fa-solid fa-arrow-right-from-bracket" style="margin-left:auto;color:var(--gray-600);font-size:13px"></i>
@@ -2378,63 +2955,86 @@ function renderSuperAdminApp() {
 
 async function saLoadBadges() {
   try {
-    const stats = await API.get('/superadmin/stats');
-    const badge = el('sa-badge-regs');
+    const stats = await API.get("/superadmin/stats");
+    const badge = el("sa-badge-regs");
     if (badge && stats) {
       const count = (stats.newLeads || 0) + (stats.underReview || 0);
-      badge.textContent = count > 0 ? count : '0';
+      badge.textContent = count > 0 ? count : "0";
     }
   } catch (e) {
-    console.warn('Failed to load SA badges:', e);
+    console.warn("Failed to load SA badges:", e);
   }
 }
 
 function saNavigate(page) {
   State.saPage = page;
   const titles = {
-    'sa-dashboard': 'Dashboard',
-    'sa-societies': 'All Societies',
-    'sa-add-society': 'Add New Society',
-    'sa-admins': 'Society Admins'
+    "sa-dashboard": "Dashboard",
+    "sa-registrations": "Society Registrations",
+    "sa-societies": "All Societies",
+    "sa-add-society": "Add New Society",
+    "sa-admins": "Society Admins",
   };
-  document.querySelectorAll('.sa-nav-item').forEach(n => n.classList.toggle('active', n.textContent.trim().startsWith(titles[page]?.substring(0,6) || '___')));
+  document
+    .querySelectorAll(".sa-nav-item")
+    .forEach((n) =>
+      n.classList.toggle(
+        "active",
+        n.textContent.trim().startsWith(titles[page]?.substring(0, 6) || "___"),
+      ),
+    );
   // Re-render sidebar active state
-  document.querySelectorAll('.sa-nav-item').forEach(n => {
-    const onclick = n.getAttribute('onclick');
-    if (onclick) n.classList.toggle('active', onclick.includes(page));
+  document.querySelectorAll(".sa-nav-item").forEach((n) => {
+    const onclick = n.getAttribute("onclick");
+    if (onclick) n.classList.toggle("active", onclick.includes(page));
   });
-  if (el('sa-topbar-title')) el('sa-topbar-title').textContent = titles[page] || page;
-  const pc = el('sa-page-content');
-  if (pc) pc.innerHTML = '<div class="skeleton skeleton-card" style="height:120px;margin-bottom:16px"></div><div class="skeleton skeleton-card" style="height:200px"></div>';
+  if (el("sa-topbar-title"))
+    el("sa-topbar-title").textContent = titles[page] || page;
+  const pc = el("sa-page-content");
+  if (pc)
+    pc.innerHTML =
+      '<div class="skeleton skeleton-card" style="height:120px;margin-bottom:16px"></div><div class="skeleton skeleton-card" style="height:200px"></div>';
 
   setTimeout(async () => {
-    switch(page) {
-      case 'sa-dashboard': await renderSADashboard(); break;
-      case 'sa-societies': await renderSASocieties(); break;
-      case 'sa-add-society': renderSAAddSociety(); break;
-      case 'sa-admins': await renderSAAdmins(); break;
+    switch (page) {
+      case "sa-dashboard":
+        await renderSADashboard();
+        break;
+      case "sa-registrations":
+        await renderSARegistrations();
+        break;
+      case "sa-societies":
+        await renderSASocieties();
+        break;
+      case "sa-add-society":
+        renderSAAddSociety();
+        break;
+      case "sa-admins":
+        await renderSAAdmins();
+        break;
     }
   }, 180);
 }
 
 async function renderSADashboard() {
-  const pc = el('sa-page-content');
+  const pc = el("sa-page-content");
   if (!pc) {
-    console.error('Page content element not found');
+    console.error("Page content element not found");
     return;
   }
-  
+
   try {
-    console.log('Loading Super Admin dashboard...');
-    
+    console.log("Loading Super Admin dashboard...");
+
     // Show loading state
-    pc.innerHTML = '<div class="skeleton skeleton-card" style="height:200px"></div>';
-    
-    const stats = await API.get('/superadmin/stats');
-    if (!stats) throw new Error('No statistics data received');
-    
-    console.log('Stats loaded:', stats);
-    
+    pc.innerHTML =
+      '<div class="skeleton skeleton-card" style="height:200px"></div>';
+
+    const stats = await API.get("/superadmin/stats");
+    if (!stats) throw new Error("No statistics data received");
+
+    console.log("Stats loaded:", stats);
+
     pc.innerHTML = `
       <div class="sa-stats-grid">
         <div class="sa-stat-card">
@@ -2504,10 +3104,13 @@ async function renderSADashboard() {
     // We derive stats client-side from the societies list
     let societies = [];
     try {
-      societies = await API.get('/superadmin/societies');
-      const tbody = el('sa-dash-societies');
+      societies = await API.get("/superadmin/societies");
+      const tbody = el("sa-dash-societies");
       if (tbody && societies) {
-        tbody.innerHTML = societies.slice(0, 5).map(s => `
+        tbody.innerHTML = societies
+          .slice(0, 5)
+          .map(
+            (s) => `
           <tr>
             <td><div class="society-name">${s.name}</div><div style="font-size:11px;color:var(--gray-400)">${s.contactEmail}</div></td>
             <td><span class="society-code">${s.code}</span></td>
@@ -2515,50 +3118,74 @@ async function renderSADashboard() {
             <td><span class="badge badge-${s.plan}">${s.plan}</span></td>
             <td><span class="badge badge-${s.status}">${s.status}</span></td>
             <td>${formatDate(s.createdAt)}</td>
-          </tr>`).join('');
+          </tr>`,
+          )
+          .join("");
       }
     } catch (err) {
-      console.warn('Failed to load societies:', err);
-      const tbody = el('sa-dash-societies');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--gray-400)">Failed to load societies</td></tr>';
+      console.warn("Failed to load societies:", err);
+      const tbody = el("sa-dash-societies");
+      if (tbody)
+        tbody.innerHTML =
+          '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--gray-400)">Failed to load societies</td></tr>';
     }
 
     // Charts
     setTimeout(() => {
       try {
-        const trendCtx = el('sa-trend-chart');
+        const trendCtx = el("sa-trend-chart");
         if (trendCtx && stats.trend && stats.trend.length > 0) {
           new Chart(trendCtx, {
-            type: 'bar',
+            type: "bar",
             data: {
-              labels: stats.trend.map(t => t.month),
-              datasets: [{
-                data: stats.trend.map(t => t.count),
-                backgroundColor: 'rgba(99,102,241,0.7)',
-                borderRadius: 6
-              }]
+              labels: stats.trend.map((t) => t.month),
+              datasets: [
+                {
+                  data: stats.trend.map((t) => t.count),
+                  backgroundColor: "rgba(99,102,241,0.7)",
+                  borderRadius: 6,
+                },
+              ],
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            },
           });
         }
-        const planCtx = el('sa-plan-chart');
+        const planCtx = el("sa-plan-chart");
         if (planCtx && stats.planDist && stats.planDist.length > 0) {
           new Chart(planCtx, {
-            type: 'doughnut',
+            type: "doughnut",
             data: {
-              labels: stats.planDist.map(p => p.plan.charAt(0).toUpperCase() + p.plan.slice(1)),
-              datasets: [{ data: stats.planDist.map(p => p.count), backgroundColor: ['#d1d5db','#818cf8','#fed7aa'], borderWidth: 0 }]
+              labels: stats.planDist.map(
+                (p) => p.plan.charAt(0).toUpperCase() + p.plan.slice(1),
+              ),
+              datasets: [
+                {
+                  data: stats.planDist.map((p) => p.count),
+                  backgroundColor: ["#d1d5db", "#818cf8", "#fed7aa"],
+                  borderWidth: 0,
+                },
+              ],
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: "bottom", labels: { font: { size: 11 } } },
+              },
+            },
           });
         }
       } catch (chartErr) {
-        console.warn('Chart rendering failed:', chartErr);
+        console.warn("Chart rendering failed:", chartErr);
       }
     }, 100);
-
   } catch (err) {
-    console.error('Super Admin dashboard error:', err);
+    console.error("Super Admin dashboard error:", err);
     pc.innerHTML = `
       <div style="text-align:center;padding:60px 20px">
         <div style="font-size:48px;margin-bottom:16px">⚠️</div>
@@ -2573,38 +3200,44 @@ async function renderSADashboard() {
 
 async function renderSARegistrations() {
   try {
-    // Registrations logic not found in existing AdminController, defaulting to empty
-    const regs = await API.get('/superadmin/registrations'); 
-    const pc = el('sa-page-content');
+    const regs = await API.get("/superadmin/registrations");
+    const pc = el("sa-page-content");
 
-    const statusTabs = ['all', 'new', 'under_review', 'approved', 'rejected'];
-    let activeTab = State.saRegTab || 'all';
+    const statusTabs = ["all", "new", "under_review", "approved", "rejected"];
+    let activeTab = State.saRegTab || "all";
 
     const renderRegTable = (filter) => {
       State.saRegTab = filter;
-      const filtered = filter === 'all' ? regs : regs.filter(r => r.status === filter);
-      return filtered.length === 0 ?
-        `<div class="empty-state" style="padding:48px">${emptyState('fa-inbox', 'No registrations', 'No society registrations found for this filter.')}</div>` :
-        `<div style="overflow-x:auto"><table class="sa-table">
-          <thead><tr><th>Society</th><th>Contact</th><th>City</th><th>Flats</th><th>Status</th><th>Submitted</th><th>Actions</th></tr></thead>
-          <tbody>${filtered.map(r => `
-            <tr>
-              <td><div class="society-name">${r.societyName}</div><div style="font-size:11px;color:var(--gray-400)">${r.message ? r.message.substring(0,50) + '…' : '—'}</div></td>
-              <td><div style="font-weight:600;font-size:13px">${r.contactName}</div><div style="font-size:11px;color:var(--gray-400)">${r.contactEmail}</div><div style="font-size:11px;color:var(--gray-400)">${r.contactPhone}</div></td>
-              <td>${r.city}${r.state ? ', ' + r.state : ''}</td>
-              <td>${r.totalFlats} flats · ${r.towers} tower${r.towers>1?'s':''}</td>
-              <td><span class="badge badge-${r.status}">${r.status.replace('_',' ')}</span></td>
-              <td>${timeAgo(r.createdAt)}</td>
-              <td>
-                <div class="sa-action-btns">
-                  ${r.status === 'new' ? `<button class="sa-icon-btn success" title="Mark Under Review" onclick="saUpdateReg('${r.id}','under_review')"><i class="fa-solid fa-eye"></i></button>` : ''}
-                  ${r.status === 'under_review' ? `<button class="sa-icon-btn success" title="Quick Approve & Activate" onclick="saApproveRegistrationLead('${r.id}')"><i class="fa-solid fa-rocket"></i></button>` : ''}
-                  ${r.status !== 'rejected' && r.status !== 'approved' ? `<button class="sa-icon-btn danger" title="Reject" onclick="saUpdateReg('${r.id}','rejected')"><i class="fa-solid fa-ban"></i></button>` : ''}
-                  <button class="sa-icon-btn" title="View Details" onclick="saViewReg('${r.id}')"><i class="fa-solid fa-eye"></i></button>
-                </div>
-              </td>
-            </tr>`).join('')}</tbody>
-        </table></div>`;
+      const filtered = filter === "all" ? regs : regs.filter((r) => r.status === filter);
+      if (filtered.length === 0)
+        return `<div class="empty-state" style="padding:48px">${emptyState("fa-inbox", "No registrations", "No society registrations found for this filter.")}</div>`;
+      return `<div style="overflow-x:auto"><table class="sa-table">
+        <thead><tr><th>Society</th><th>Contact</th><th>City</th><th>Flats</th><th>Status</th><th>Submitted</th><th>Actions</th></tr></thead>
+        <tbody>${filtered.map((r) => `
+          <tr>
+            <td>
+              <div class="society-name">${r.societyName}</div>
+              <div style="font-size:11px;color:var(--gray-400)">${r.message ? r.message.substring(0, 50) + "…" : "—"}</div>
+            </td>
+            <td>
+              <div style="font-weight:600;font-size:13px">${r.contactName}</div>
+              <div style="font-size:11px;color:var(--gray-400)">${r.contactEmail}</div>
+              <div style="font-size:11px;color:var(--gray-400)">${r.contactPhone}</div>
+            </td>
+            <td>${r.city}${r.state ? ", " + r.state : ""}</td>
+            <td>${r.totalFlats} flats · ${r.towers} tower${r.towers > 1 ? "s" : ""}</td>
+            <td><span class="badge badge-${r.status}">${r.status.replace("_", " ")}</span></td>
+            <td>${timeAgo(r.createdAt)}</td>
+            <td>
+              <div class="sa-action-btns">
+                <button class="sa-icon-btn" title="View Details" onclick="saViewReg('${r.id}')"><i class="fa-solid fa-eye"></i></button>
+                ${r.status === "new" ? `<button class="sa-icon-btn success" title="Mark Under Review" onclick="saUpdateReg('${r.id}','under_review')"><i class="fa-solid fa-magnifying-glass"></i></button>` : ""}
+                ${r.status === "under_review" ? `<button class="sa-icon-btn success" title="Review & approve" onclick="saOpenApproveRegistrationModal('${r.id}')"><i class="fa-solid fa-rocket"></i></button>` : ""}
+                ${(r.status === "new" || r.status === "under_review") ? `<button class="sa-icon-btn danger" title="Reject" onclick="saUpdateReg('${r.id}','rejected')"><i class="fa-solid fa-ban"></i></button>` : ""}
+              </div>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table></div>`;
     };
 
     pc.innerHTML = `
@@ -2614,122 +3247,311 @@ async function renderSARegistrations() {
           <div style="font-size:13px;color:var(--gray-400)">${regs.length} total registrations</div>
         </div>
         <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;gap:6px;flex-wrap:wrap">
-          ${statusTabs.map(t => `
-            <button class="btn btn-sm ${activeTab===t?'btn-primary':'btn-ghost'}" id="reg-tab-${t}" onclick="saFilterRegs('${t}')">
-              ${t === 'all' ? 'All' : t.replace('_',' ')} ${t==='all'?regs.length:regs.filter(r=>r.status===t).length?`(${regs.filter(r=>r.status===t).length})`:''}
-            </button>`).join('')}
+          ${statusTabs.map((t) => `
+            <button class="btn btn-sm ${activeTab === t ? "btn-primary" : "btn-ghost"}" id="reg-tab-${t}" onclick="saFilterRegs('${t}')">
+              ${t === "all" ? "All" : t.replace("_", " ")} ${t === "all" ? regs.length : regs.filter((r) => r.status === t).length ? `(${regs.filter((r) => r.status === t).length})` : ""}
+            </button>`).join("")}
         </div>
         <div id="reg-table-body">${renderRegTable(activeTab)}</div>
       </div>`;
 
     window._saRegs = regs;
     window._saRenderRegTable = renderRegTable;
-
-  } catch (err) { showError('Failed to load registrations'); }
+  } catch (err) {
+    showError("Failed to load registrations");
+  }
 }
 
 function saFilterRegs(tab) {
   State.saRegTab = tab;
-  const filtered = tab === 'all' ? window._saRegs : window._saRegs.filter(r => r.status === tab);
-  document.querySelectorAll('[id^="reg-tab-"]').forEach(b => b.classList.remove('btn-primary'));
-  document.querySelectorAll('[id^="reg-tab-"]').forEach(b => b.classList.add('btn-ghost'));
-  const activeBtn = el('reg-tab-' + tab);
-  if (activeBtn) { activeBtn.classList.remove('btn-ghost'); activeBtn.classList.add('btn-primary'); }
-  const tbody = el('reg-table-body');
+  const filtered =
+    tab === "all"
+      ? window._saRegs
+      : window._saRegs.filter((r) => r.status === tab);
+  document
+    .querySelectorAll('[id^="reg-tab-"]')
+    .forEach((b) => b.classList.remove("btn-primary"));
+  document
+    .querySelectorAll('[id^="reg-tab-"]')
+    .forEach((b) => b.classList.add("btn-ghost"));
+  const activeBtn = el("reg-tab-" + tab);
+  if (activeBtn) {
+    activeBtn.classList.remove("btn-ghost");
+    activeBtn.classList.add("btn-primary");
+  }
+  const tbody = el("reg-table-body");
   if (tbody) tbody.innerHTML = window._saRenderRegTable(tab);
 }
 
 async function saUpdateReg(id, status) {
   try {
     await API.put(`/superadmin/registrations/${id}`, { status });
-    Toast.success('Updated', `Registration status → ${status.replace('_', ' ')}`);
-    await renderSARegistrations();
+    Toast.success("Updated", `Registration status → ${status.replace("_", " ")}`);
+    // Update local array and re-render in place — no full page reload
+    if (window._saRegs) {
+      const reg = window._saRegs.find((r) => String(r.id) === String(id));
+      if (reg) reg.status = status;
+    }
+    const tbody = el("reg-table-body");
+    if (tbody && window._saRenderRegTable)
+      tbody.innerHTML = window._saRenderRegTable(State.saRegTab || "all");
     saLoadBadges();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
-async function saApproveRegistrationLead(id) {
-  if (!confirm('Are you sure you want to approve this lead? This will automatically create the society and an admin account.')) return;
-  
-  try {
-    const res = await API.post(`/superadmin/registrations/${id}/approve`);
-    
-    // Show success modal with credentials
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay open';
-    overlay.id = 'reg-success-modal';
-    overlay.innerHTML = `
+function saShowRegApproveSuccessModal(res) {
+  const already = res.already_approved === true;
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay open";
+  overlay.id = "reg-success-modal";
+  const credBlock = already
+    ? `<p style="font-size:14px;color:var(--gray-600);text-align:left">This lead was already approved. Society is linked (code <strong style="font-family:monospace;color:var(--orange-600)">${res.code || "—"}</strong>). No new password was issued — use the admin credentials you already shared.</p>`
+    : `<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:16px;text-align:left">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:12px">Admin Credentials</div>
+            <div style="margin-bottom:8px"><span style="font-size:12px;color:var(--gray-400)">Login Phone:</span> <strong style="color:var(--gray-800)">${res.admin_phone}</strong></div>
+            <div><span style="font-size:12px;color:var(--gray-400)">Temporary Password:</span> <strong style="color:var(--primary-600)">${res.password ?? "—"}</strong></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--gray-200)"><span style="font-size:12px;color:var(--gray-400)">Society Code:</span> <strong style="color:var(--orange-600);font-family:monospace">${res.code}</strong></div>
+          </div>`;
+  overlay.innerHTML = `
       <div class="modal modal-sm">
         <div class="modal-header">
-          <span class="modal-title">Society Activated!</span>
+          <span class="modal-title">${already ? "Already active" : "Society Activated!"}</span>
           <button class="modal-close" onclick="Modal.close('reg-success-modal')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body" style="text-align:center">
           <i class="fa-solid fa-circle-check" style="color:var(--green-500);font-size:48px;margin-bottom:16px"></i>
-          <h3>${res.society_name} is now Live</h3>
-          <p style="font-size:14px;color:var(--gray-600);margin-bottom:20px">The society has been created and the admin account is active.</p>
-          
-          <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:16px;text-align:left">
-            <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:12px">Admin Credentials</div>
-            <div style="margin-bottom:8px"><span style="font-size:12px;color:var(--gray-400)">Login Phone:</span> <strong style="color:var(--gray-800)">${res.admin_phone}</strong></div>
-            <div><span style="font-size:12px;color:var(--gray-400)">Temporary Password:</span> <strong style="color:var(--primary-600)">${res.password}</strong></div>
-            <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--gray-200)"><span style="font-size:12px;color:var(--gray-400)">Society Code:</span> <strong style="color:var(--orange-600);font-family:monospace">${res.code}</strong></div>
-          </div>
+          <h3>${res.society_name}${already ? "" : " is now Live"}</h3>
+          <p style="font-size:14px;color:var(--gray-600);margin-bottom:20px">${already ? "No duplicate society was created." : "The society has been created and the admin account is active."}</p>
+          ${credBlock}
         </div>
         <div class="modal-footer">
-          <button class="btn btn-primary btn-block" onclick="Modal.close('reg-success-modal'); renderSARegistrations();">Got it</button>
+          <button class="btn btn-primary btn-block" onclick="Modal.close('reg-success-modal');">Got it</button>
         </div>
       </div>`;
-    document.body.appendChild(overlay);
-  } catch (err) {
-    Toast.error('Approval Failed', err.message);
+  document.body.appendChild(overlay);
+}
+
+function saOpenApproveRegistrationModal(id) {
+  const reg = window._saRegs?.find((r) => String(r.id) === String(id));
+  if (!reg) return;
+  if (reg.status !== "under_review") {
+    Toast.warning("Review first", "Mark this lead as Under Review before approving.");
+    return;
   }
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay open";
+  overlay.id = "reg-approve-modal";
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:720px">
+      <div class="modal-header">
+        <span class="modal-title"><i class="fa-solid fa-rocket" style="color:var(--green-600)"></i> Approve &amp; activate — edit details</span>
+        <button class="modal-close" onclick="Modal.close('reg-approve-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+        <p style="font-size:13px;color:var(--gray-600);margin:0 0 16px">Adjust society and admin details below, then approve. Leave password blank to auto-generate one.</p>
+        <h4 style="font-size:13px;font-weight:700;text-transform:uppercase;color:var(--gray-500);margin:0 0 10px">Society</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Society name *</label><input type="text" class="form-input" id="apv-societyName" required></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Address</label><input type="text" class="form-input" id="apv-address"></div>
+          <div class="form-group"><label class="form-label">City *</label><input type="text" class="form-input" id="apv-city" required></div>
+          <div class="form-group"><label class="form-label">State</label><input type="text" class="form-input" id="apv-state"></div>
+          <div class="form-group"><label class="form-label">Pincode</label><input type="text" class="form-input" id="apv-pincode"></div>
+          <div class="form-group"><label class="form-label">Plan</label>
+            <select class="form-input" id="apv-plan">
+              <option value="starter">Starter</option>
+              <option value="professional">Professional</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Towers</label><input type="number" class="form-input" id="apv-towers" min="1" step="1"></div>
+          <div class="form-group"><label class="form-label">Total flats</label><input type="number" class="form-input" id="apv-totalFlats" min="0" step="1"></div>
+          <div class="form-group"><label class="form-label">GST</label><input type="text" class="form-input" id="apv-gst"></div>
+          <div class="form-group"><label class="form-label">PAN</label><input type="text" class="form-input" id="apv-pan"></div>
+        </div>
+        <h4 style="font-size:13px;font-weight:700;text-transform:uppercase;color:var(--gray-500);margin:20px 0 10px">Society administrator</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Full name *</label><input type="text" class="form-input" id="apv-contactName" required></div>
+          <div class="form-group"><label class="form-label">Email *</label><input type="email" class="form-input" id="apv-contactEmail" required></div>
+          <div class="form-group"><label class="form-label">Phone *</label><input type="tel" class="form-input" id="apv-contactPhone" required></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Admin password (optional)</label><input type="text" class="form-input" id="apv-adminPassword" placeholder="Leave blank to auto-generate (min 8 chars if set)" autocomplete="off"></div>
+        </div>
+        <div id="apv-err" style="display:none;margin-top:12px;padding:10px 12px;background:var(--red-50);border:1px solid var(--red-200);border-radius:var(--radius-md);font-size:13px;color:var(--red-800)"></div>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" onclick="Modal.close('reg-approve-modal')">Cancel</button>
+        <button type="button" class="btn btn-success" id="apv-submit-btn"><i class="fa-solid fa-circle-check"></i> Approve &amp; activate</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) Modal.close("reg-approve-modal");
+  });
+
+  const v = (hid) => document.getElementById(hid);
+  v("apv-societyName").value = reg.societyName || "";
+  v("apv-address").value = reg.address || "";
+  v("apv-city").value = reg.city || "";
+  v("apv-state").value = reg.state || "";
+  v("apv-pincode").value = reg.pincode || "";
+  v("apv-towers").value = reg.towers != null ? String(reg.towers) : "1";
+  v("apv-totalFlats").value = reg.totalFlats != null ? String(reg.totalFlats) : "0";
+  v("apv-gst").value = reg.gst || "";
+  v("apv-pan").value = reg.pan || "";
+  v("apv-contactName").value = reg.contactName || "";
+  v("apv-contactEmail").value = reg.contactEmail || "";
+  v("apv-contactPhone").value = reg.contactPhone || "";
+  v("apv-plan").value = reg.plan && ["starter", "professional", "enterprise"].includes(reg.plan) ? reg.plan : "starter";
+
+  const errEl = v("apv-err");
+  const btn = v("apv-submit-btn");
+  btn.onclick = async () => {
+    errEl.style.display = "none";
+    const societyName = v("apv-societyName").value.trim();
+    const city = v("apv-city").value.trim();
+    const contactName = v("apv-contactName").value.trim();
+    const contactEmail = v("apv-contactEmail").value.trim();
+    const contactPhone = v("apv-contactPhone").value.trim();
+    const adminPassword = v("apv-adminPassword").value.trim();
+    if (!societyName || !city || !contactName || !contactEmail || !contactPhone) {
+      errEl.textContent = "Please fill all required fields (society name, city, admin name, email, phone).";
+      errEl.style.display = "block";
+      return;
+    }
+    if (adminPassword && adminPassword.length < 8) {
+      errEl.textContent = "Admin password must be at least 8 characters, or leave blank.";
+      errEl.style.display = "block";
+      return;
+    }
+    const body = {
+      societyName,
+      address: v("apv-address").value.trim(),
+      city,
+      state: v("apv-state").value.trim(),
+      pincode: v("apv-pincode").value.trim(),
+      towers: parseInt(v("apv-towers").value, 10) || 1,
+      totalFlats: parseInt(v("apv-totalFlats").value, 10) || 0,
+      gst: v("apv-gst").value.trim() || null,
+      pan: v("apv-pan").value.trim() || null,
+      contactName,
+      contactEmail,
+      contactPhone,
+      plan: v("apv-plan").value,
+    };
+    if (adminPassword) body.adminPassword = adminPassword;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving…';
+    try {
+      const res = await API.post(`/superadmin/registrations/${id}/approve`, body);
+      Modal.close("reg-approve-modal");
+      if (window._saRegs) {
+        const r2 = window._saRegs.find((r) => String(r.id) === String(id));
+        if (r2) {
+          r2.status = "approved";
+          Object.assign(r2, {
+            societyName: body.societyName,
+            address: body.address,
+            city: body.city,
+            state: body.state,
+            pincode: body.pincode,
+            towers: body.towers,
+            totalFlats: body.totalFlats,
+            gst: body.gst,
+            pan: body.pan,
+            contactName: body.contactName,
+            contactEmail: body.contactEmail,
+            contactPhone: body.contactPhone,
+          });
+        }
+      }
+      const tbody = el("reg-table-body");
+      if (tbody && window._saRenderRegTable)
+        tbody.innerHTML = window._saRenderRegTable(State.saRegTab || "all");
+      saLoadBadges();
+      saShowRegApproveSuccessModal(res);
+    } catch (err) {
+      errEl.textContent = err.message || "Approval failed";
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Approve &amp; activate';
+    }
+  };
 }
 
 function saViewReg(id) {
-  const reg = window._saRegs?.find(r => r.id === id);
+  const reg = window._saRegs?.find((r) => String(r.id) === String(id));
   if (!reg) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.id = 'reg-view-modal';
+
+  const isApproved = reg.status === "approved";
+  const isRejected = reg.status === "rejected";
+  const canAct     = !isApproved && !isRejected;
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay open";
+  overlay.id = "reg-view-modal";
   overlay.innerHTML = `
     <div class="modal">
       <div class="modal-header">
-        <span class="modal-title">Registration Details — ${reg.societyName}</span>
+        <span class="modal-title"><i class="fa-solid fa-inbox" style="color:var(--primary-500)"></i> ${reg.societyName}</span>
         <button class="modal-close" onclick="Modal.close('reg-view-modal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
+        ${isApproved ? `
+          <div style="background:var(--green-50);border:1px solid var(--green-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green-800)">
+            <i class="fa-solid fa-circle-check"></i> This registration has been <strong>approved</strong>. The society is live in the All Societies page.
+          </div>` : ""}
         <div class="society-detail-grid">
           <div class="society-detail-item"><label>Society Name</label><span>${reg.societyName}</span></div>
-          <div class="society-detail-item"><label>Status</label><span class="badge badge-${reg.status}">${reg.status.replace('_',' ')}</span></div>
-          <div class="society-detail-item"><label>City / State</label><span>${reg.city}${reg.state?', '+reg.state:''}</span></div>
-          <div class="society-detail-item"><label>Pincode</label><span>${reg.pincode || '—'}</span></div>
+          <div class="society-detail-item"><label>Status</label><span class="badge badge-${reg.status}">${reg.status.replace("_", " ")}</span></div>
+          <div class="society-detail-item"><label>City / State</label><span>${reg.city}${reg.state ? ", " + reg.state : ""}</span></div>
+          <div class="society-detail-item"><label>Pincode</label><span>${reg.pincode || "—"}</span></div>
           <div class="society-detail-item"><label>Towers</label><span>${reg.towers}</span></div>
           <div class="society-detail-item"><label>Total Flats</label><span>${reg.totalFlats}</span></div>
           <div class="society-detail-item"><label>Contact Name</label><span>${reg.contactName}</span></div>
           <div class="society-detail-item"><label>Phone</label><span>${reg.contactPhone}</span></div>
           <div class="society-detail-item"><label>Email</label><span>${reg.contactEmail}</span></div>
           <div class="society-detail-item"><label>Submitted</label><span>${formatDateTime(reg.createdAt)}</span></div>
-          ${reg.gst ? `<div class="society-detail-item"><label>GST</label><span>${reg.gst}</span></div>` : ''}
-          ${reg.pan ? `<div class="society-detail-item"><label>PAN</label><span>${reg.pan}</span></div>` : ''}
+          ${reg.gst ? `<div class="society-detail-item"><label>GST</label><span>${reg.gst}</span></div>` : ""}
+          ${reg.pan ? `<div class="society-detail-item"><label>PAN</label><span>${reg.pan}</span></div>` : ""}
         </div>
-        ${reg.message ? `<div style="background:var(--gray-50);border-radius:var(--radius-md);padding:12px 16px;font-size:13px;color:var(--gray-600);border:1px solid var(--gray-200)"><strong>Message:</strong> ${reg.message}</div>` : ''}
+        ${reg.message ? `<div style="background:var(--gray-50);border-radius:var(--radius-md);padding:12px 16px;font-size:13px;color:var(--gray-600);border:1px solid var(--gray-200);margin-top:12px"><strong>Message:</strong> ${reg.message}</div>` : ""}
       </div>
       <div class="modal-footer">
-        ${reg.status === 'new' ? `<button class="btn btn-warning" onclick="saUpdateReg('${reg.id}','under_review');Modal.close('reg-view-modal')">Mark Under Review</button>` : ''}
-        ${reg.status === 'under_review' ? `<button class="btn btn-success" onclick="saApproveRegistrationLead('${reg.id}');Modal.close('reg-view-modal')">Quick Approve & Activate</button>` : ''}
-        ${reg.status !== 'rejected' && reg.status !== 'approved' ? `<button class="btn btn-danger" onclick="saUpdateReg('${reg.id}','rejected');Modal.close('reg-view-modal')">Reject</button>` : ''}
+        ${reg.status === "new" ? `<button class="btn btn-warning" id="rv-review-btn"><i class="fa-solid fa-magnifying-glass"></i> Mark Under Review</button>` : ""}
+        ${reg.status === "under_review" ? `<button class="btn btn-success" id="rv-approve-btn"><i class="fa-solid fa-rocket"></i> Edit details &amp; approve</button>` : ""}
+        ${canAct ? `<button class="btn btn-primary" id="rv-prefill-btn"><i class="fa-solid fa-pen-to-square"></i> Open in Add Society</button>` : ""}
+        ${canAct ? `<button class="btn btn-danger" id="rv-reject-btn"><i class="fa-solid fa-ban"></i> Reject</button>` : ""}
+        ${isApproved ? `<button class="btn btn-primary" id="rv-view-society-btn"><i class="fa-solid fa-building"></i> View in All Societies</button>` : ""}
         <button class="btn btn-ghost" onclick="Modal.close('reg-view-modal')">Close</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) Modal.close('reg-view-modal'); });
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) Modal.close("reg-view-modal"); });
+
+  const reviewBtn      = document.getElementById("rv-review-btn");
+  const approveBtn     = document.getElementById("rv-approve-btn");
+  const prefillBtn     = document.getElementById("rv-prefill-btn");
+  const rejectBtn      = document.getElementById("rv-reject-btn");
+  const viewSocietyBtn = document.getElementById("rv-view-society-btn");
+
+  if (reviewBtn)      reviewBtn.onclick      = async () => { Modal.close("reg-view-modal"); await saUpdateReg(reg.id, "under_review"); };
+  if (approveBtn)     approveBtn.onclick     = () => { Modal.close("reg-view-modal"); saOpenApproveRegistrationModal(reg.id); };
+  if (prefillBtn)     prefillBtn.onclick     = () => { 
+    Modal.close("reg-view-modal"); 
+    State.saAddSocietyPrefill = { ...reg, registrationId: reg.id }; 
+    saNavigate("sa-add-society"); 
+  };
+  if (rejectBtn)      rejectBtn.onclick      = async () => { Modal.close("reg-view-modal"); await saUpdateReg(reg.id, "rejected"); };
+  if (viewSocietyBtn) viewSocietyBtn.onclick = () => { Modal.close("reg-view-modal"); saNavigate("sa-societies"); };
 }
 
 async function renderSASocieties() {
   try {
-    const societies = await API.get('/superadmin/societies');
-    const pc = el('sa-page-content');
+    const societies = await API.get("/superadmin/societies");
+    const pc = el("sa-page-content");
     pc.innerHTML = `
       <div class="sa-table-card">
         <div class="sa-table-header">
@@ -2742,41 +3564,47 @@ async function renderSASocieties() {
               <th>Society</th><th>Code</th><th>Location</th><th>Flats</th><th>Plan</th><th>Status</th><th>Admin</th><th>Actions</th>
             </tr></thead>
             <tbody>
-              ${societies.map(s => `
+              ${societies
+                .map(
+                  (s) => `
                 <tr>
                   <td>
                     <div class="society-name">${s.name}</div>
                     <div style="font-size:11px;color:var(--gray-400)">${s.contactEmail}</div>
                   </td>
                   <td><span class="society-code">${s.code}</span></td>
-                  <td>${s.city}${s.state ? ', ' + s.state : ''}</td>
-                  <td>${s.totalFlats} / ${s.towers} tower${s.towers>1?'s':''}</td>
+                  <td>${s.city}${s.state ? ", " + s.state : ""}</td>
+                  <td>${s.totalFlats} / ${s.towers} tower${s.towers > 1 ? "s" : ""}</td>
                   <td><span class="badge badge-${s.plan}">${s.plan}</span></td>
                   <td><span class="badge badge-${s.status}">${s.status}</span></td>
                   <td>${s.adminId ? '<span style="color:var(--green-600);font-size:12px"><i class="fa-solid fa-check-circle"></i> Assigned</span>' : '<span style="color:var(--orange-500);font-size:12px"><i class="fa-solid fa-circle-exclamation"></i> None</span>'}</td>
                   <td>
                     <div class="sa-action-btns">
                       <button class="sa-icon-btn" title="View & Manage" onclick="saViewSociety('${s.id}')"><i class="fa-solid fa-eye"></i></button>
-                      ${s.status !== 'approved' ? `<button class="sa-icon-btn success" title="Approve" onclick="saApproveSociety('${s.id}')"><i class="fa-solid fa-check"></i></button>` : ''}
-                      ${!s.adminId ? `<button class="sa-icon-btn" title="Create Admin" onclick="saCreateAdmin('${s.id}','${s.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-user-plus"></i></button>` : ''}
-                      ${s.status !== 'suspended' ? `<button class="sa-icon-btn danger" title="Suspend" onclick="saSuspendSociety('${s.id}')"><i class="fa-solid fa-ban"></i></button>` : ''}
-                      <button class="sa-icon-btn danger" title="Delete" onclick="saDeleteSociety('${s.id}','${s.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                      ${s.status !== "approved" ? `<button class="sa-icon-btn success" title="Approve" onclick="saApproveSociety('${s.id}')"><i class="fa-solid fa-check"></i></button>` : ""}
+                      ${!s.adminId ? `<button class="sa-icon-btn" title="Create Admin" onclick="saCreateAdmin('${s.id}','${s.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-user-plus"></i></button>` : ""}
+                      ${s.status !== "suspended" ? `<button class="sa-icon-btn danger" title="Suspend" onclick="saSuspendSociety('${s.id}')"><i class="fa-solid fa-ban"></i></button>` : ""}
+                      <button class="sa-icon-btn danger" title="Delete" onclick="saDeleteSociety('${s.id}','${s.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i></button>
                     </div>
                   </td>
-                </tr>`).join('')}
+                </tr>`,
+                )
+                .join("")}
             </tbody>
           </table>
         </div>
       </div>`;
-  } catch (err) { showError('Failed to load societies'); }
+  } catch (err) {
+    showError("Failed to load societies");
+  }
 }
 
 async function saViewSociety(id) {
   try {
     const s = await API.get(`/superadmin/societies/${id}`);
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.id = 'society-view-modal';
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "society-view-modal";
     overlay.innerHTML = `
       <div class="modal">
         <div class="modal-header">
@@ -2788,110 +3616,129 @@ async function saViewSociety(id) {
             <label>Society Code</label>
             <div class="code-value">${s.code}</div>
           </div>
-          ${s.inviteLink ? `<div class="invite-link-box"><i class="fa-solid fa-link" style="color:var(--primary-500);flex-shrink:0"></i> ${s.inviteLink}</div>` : ''}
+          ${s.inviteLink ? `<div class="invite-link-box"><i class="fa-solid fa-link" style="color:var(--primary-500);flex-shrink:0"></i> ${s.inviteLink}</div>` : ""}
           <div class="society-detail-grid" style="margin-top:16px">
             <div class="society-detail-item"><label>Name</label><span>${s.name}</span></div>
             <div class="society-detail-item"><label>Status</label><span class="badge badge-${s.status}">${s.status}</span></div>
             <div class="society-detail-item"><label>City</label><span>${s.city}</span></div>
-            <div class="society-detail-item"><label>State</label><span>${s.state || '—'}</span></div>
+            <div class="society-detail-item"><label>State</label><span>${s.state || "—"}</span></div>
             <div class="society-detail-item"><label>Towers</label><span>${s.towers}</span></div>
             <div class="society-detail-item"><label>Total Flats</label><span>${s.totalFlats}</span></div>
             <div class="society-detail-item"><label>Plan</label><span class="badge badge-${s.plan}">${s.plan}</span></div>
             <div class="society-detail-item"><label>Residents</label><span>${s.userCount || 0}</span></div>
             <div class="society-detail-item"><label>Contact</label><span>${s.contactName}</span></div>
-            <div class="society-detail-item"><label>Phone</label><span>${s.contactPhone || '—'}</span></div>
+            <div class="society-detail-item"><label>Phone</label><span>${s.contactPhone || "—"}</span></div>
             <div class="society-detail-item"><label>Email</label><span>${s.contactEmail}</span></div>
             <div class="society-detail-item"><label>Created</label><span>${formatDate(s.createdAt)}</span></div>
-            ${s.gst ? `<div class="society-detail-item"><label>GST</label><span>${s.gst}</span></div>` : ''}
-            ${s.pan ? `<div class="society-detail-item"><label>PAN</label><span>${s.pan}</span></div>` : ''}
+            ${s.gst ? `<div class="society-detail-item"><label>GST</label><span>${s.gst}</span></div>` : ""}
+            ${s.pan ? `<div class="society-detail-item"><label>PAN</label><span>${s.pan}</span></div>` : ""}
           </div>
-          ${s.admin ? `
+          ${
+            s.admin
+              ? `
             <div style="margin-top:16px;padding:14px 16px;background:var(--green-50);border:1px solid var(--green-200);border-radius:var(--radius-md)">
               <div style="font-size:12px;font-weight:700;color:var(--green-700);margin-bottom:6px"><i class="fa-solid fa-user-shield"></i> Society Admin Assigned</div>
               <div style="font-size:13px;color:var(--gray-700)">${s.admin.name} · ${s.admin.email} · ${s.admin.phone}</div>
-            </div>` : `
+            </div>`
+              : `
             <div style="margin-top:16px;padding:14px 16px;background:var(--orange-50);border:1px solid var(--orange-200);border-radius:var(--radius-md)">
               <div style="font-size:13px;color:var(--orange-700)"><i class="fa-solid fa-circle-exclamation"></i> No admin assigned yet.</div>
-            </div>`}
+            </div>`
+          }
         </div>
         <div class="modal-footer">
-          ${s.status !== 'approved' ? `<button class="btn btn-success" id="society-approve-btn"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
-          ${!s.adminId ? `<button class="btn btn-primary" id="society-create-admin-btn"><i class="fa-solid fa-user-plus"></i> Create Admin</button>` : ''}
+          ${s.status !== "approved" ? `<button class="btn btn-success" id="society-approve-btn"><i class="fa-solid fa-check"></i> Approve</button>` : ""}
+          ${!s.adminId ? `<button class="btn btn-primary" id="society-create-admin-btn"><i class="fa-solid fa-user-plus"></i> Create Admin</button>` : ""}
           <button class="btn btn-ghost" id="society-close-btn">Close</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    
+
     // Open the modal with animation
-    setTimeout(() => overlay.classList.add('open'), 10);
-    
+    setTimeout(() => overlay.classList.add("open"), 10);
+
     // Define close function
     const closeModal = () => {
-      overlay.classList.remove('open');
+      overlay.classList.remove("open");
       setTimeout(() => overlay.remove(), 300);
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
-    
+
     // Close button handlers
-    const closeBtn = document.getElementById('society-close-btn');
-    const closeIcon = document.getElementById('society-view-close-btn');
-    
+    const closeBtn = document.getElementById("society-close-btn");
+    const closeIcon = document.getElementById("society-view-close-btn");
+
     if (closeBtn) closeBtn.onclick = closeModal;
     if (closeIcon) closeIcon.onclick = closeModal;
-    
+
     // Background click to close
-    overlay.addEventListener('click', e => {
+    overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeModal();
     });
-    
+
     // Action buttons
-    const approveBtn = document.getElementById('society-approve-btn');
-    const createAdminBtn = document.getElementById('society-create-admin-btn');
-    
+    const approveBtn = document.getElementById("society-approve-btn");
+    const createAdminBtn = document.getElementById("society-create-admin-btn");
+
     if (approveBtn) {
       approveBtn.onclick = async () => {
         await saApproveSociety(s.id);
         closeModal();
       };
     }
-    
+
     if (createAdminBtn) {
       createAdminBtn.onclick = () => {
         saCreateAdmin(s.id, s.name);
         closeModal();
       };
     }
-    
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function saApproveSociety(id) {
   try {
     // Status update logic needs to be added to AdminController->updateSociety
     await API.put(`/superadmin/societies/${id}/approve`, {});
-    Toast.success('Approved!', 'Society has been approved and is now active');
+    Toast.success("Approved!", "Society has been approved and is now active");
     await renderSASocieties();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 async function saSuspendSociety(id) {
-  Modal.confirm('Suspend Society', 'This will prevent society users from logging in. Continue?', async () => {
-    try {
-      await API.put(`/superadmin/societies/${id}/suspend`, {});
-      Toast.warning('Suspended', 'Society has been suspended');
-      await renderSASocieties();
-    } catch (err) { Toast.error('Error', err.message); }
-  });
+  Modal.confirm(
+    "Suspend Society",
+    "This will prevent society users from logging in. Continue?",
+    async () => {
+      try {
+        await API.put(`/superadmin/societies/${id}/suspend`, {});
+        Toast.warning("Suspended", "Society has been suspended");
+        await renderSASocieties();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 async function saDeleteSociety(id, name) {
-  Modal.confirm(`Delete "${name}"`, 'This permanently deletes the society and all associated data. This cannot be undone!', async () => {
-    try {
-      await API.delete(`/superadmin/societies/${id}`);
-      Toast.error('Deleted', `"${name}" has been permanently deleted`);
-      await renderSASocieties();
-    } catch (err) { Toast.error('Error', err.message); }
-  });
+  Modal.confirm(
+    `Delete "${name}"`,
+    "This permanently deletes the society and all associated data. This cannot be undone!",
+    async () => {
+      try {
+        await API.delete(`/superadmin/societies/${id}`);
+        Toast.error("Deleted", `"${name}" has been permanently deleted`);
+        await renderSASocieties();
+      } catch (err) {
+        Toast.error("Error", err.message);
+      }
+    },
+  );
 }
 
 // ── SUPER ADMIN: ADD SOCIETY ────────────────────────────────
@@ -2901,7 +3748,7 @@ const SA_TOTAL_STEPS = 3;
 function renderSAAddSociety() {
   saAddStep = 1;
   const prefill = State.saAddSocietyPrefill || {};
-  const pc = el('sa-page-content');
+  const pc = el("sa-page-content");
   pc.innerHTML = `
     <div class="sa-table-card">
       <div class="sa-table-header">
@@ -2928,33 +3775,33 @@ function renderAddSocietyForm(prefill = {}) {
           </h3>
           <div class="form-group">
             <label class="form-label">Society Name *</label>
-            <input type="text" class="form-input" id="as-name" placeholder="e.g. Greenwood Heights" value="${prefill.name || ''}" required>
+            <input type="text" class="form-input" id="as-name" placeholder="e.g. Greenwood Heights" value="${prefill.name || ""}" required>
           </div>
           <div class="form-group">
             <label class="form-label">Address *</label>
-            <input type="text" class="form-input" id="as-address" placeholder="Street, Sector, Locality" value="${prefill.address || ''}" required>
+            <input type="text" class="form-input" id="as-address" placeholder="Street, Sector, Locality" value="${prefill.address || ""}" required>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group">
               <label class="form-label">City *</label>
-              <input type="text" class="form-input" id="as-city" placeholder="e.g. Mumbai" value="${prefill.city || ''}" required>
+              <input type="text" class="form-input" id="as-city" placeholder="e.g. Mumbai" value="${prefill.city || ""}" required>
             </div>
             <div class="form-group">
               <label class="form-label">State</label>
-              <input type="text" class="form-input" id="as-state" placeholder="e.g. Maharashtra" value="${prefill.state || ''}">
+              <input type="text" class="form-input" id="as-state" placeholder="e.g. Maharashtra" value="${prefill.state || ""}">
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group">
               <label class="form-label">Pincode</label>
-              <input type="text" class="form-input" id="as-pincode" placeholder="e.g. 400001" value="${prefill.pincode || ''}">
+              <input type="text" class="form-input" id="as-pincode" placeholder="e.g. 400001" value="${prefill.pincode || ""}">
             </div>
             <div class="form-group">
               <label class="form-label">Plan</label>
               <select class="form-input" id="as-plan">
-                <option value="starter" ${(prefill.plan||'professional')==='starter'?'selected':''}>Starter</option>
-                <option value="professional" ${(prefill.plan||'professional')==='professional'?'selected':''}>Professional</option>
-                <option value="enterprise" ${(prefill.plan||'')==='enterprise'?'selected':''}>Enterprise</option>
+                <option value="starter" ${(prefill.plan || "professional") === "starter" ? "selected" : ""}>Starter</option>
+                <option value="professional" ${(prefill.plan || "professional") === "professional" ? "selected" : ""}>Professional</option>
+                <option value="enterprise" ${(prefill.plan || "") === "enterprise" ? "selected" : ""}>Enterprise</option>
               </select>
             </div>
           </div>
@@ -2967,15 +3814,15 @@ function renderAddSocietyForm(prefill = {}) {
           </h3>
           <div class="form-group">
             <label class="form-label">Admin Full Name *</label>
-            <input type="text" class="form-input" id="as-cname" placeholder="Full name" value="${prefill.contactName || prefill.contact_person || ''}" required>
+            <input type="text" class="form-input" id="as-cname" placeholder="Full name" value="${prefill.contactName || prefill.contact_person || ""}" required>
           </div>
           <div class="form-group">
             <label class="form-label">Admin Email *</label>
-            <input type="email" class="form-input" id="as-cemail" placeholder="email@address.com" value="${prefill.contactEmail || prefill.contact_email || ''}" required>
+            <input type="email" class="form-input" id="as-cemail" placeholder="email@address.com" value="${prefill.contactEmail || prefill.contact_email || ""}" required>
           </div>
           <div class="form-group">
             <label class="form-label">Admin Phone *</label>
-            <input type="tel" class="form-input" id="as-cphone" placeholder="10-digit mobile" value="${prefill.contactPhone || prefill.contact_phone || ''}" required>
+            <input type="tel" class="form-input" id="as-cphone" placeholder="10-digit mobile" value="${prefill.contactPhone || prefill.contact_phone || ""}" required>
           </div>
           <div class="form-group">
             <label class="form-label">Initial Password *</label>
@@ -2995,60 +3842,73 @@ function renderAddSocietyForm(prefill = {}) {
 }
 
 async function saCreateSocietyFull() {
-  const name = el('as-name')?.value.trim();
-  const city = el('as-city')?.value.trim();
-  const email = el('as-cemail')?.value.trim();
-  const adminName = el('as-cname')?.value.trim();
-  const adminPhone = el('as-cphone')?.value.trim();
-  const adminPass = el('as-password')?.value.trim();
+  const name = el("as-name")?.value.trim();
+  const city = el("as-city")?.value.trim();
+  const email = el("as-cemail")?.value.trim();
+  const adminName = el("as-cname")?.value.trim();
+  const adminPhone = el("as-cphone")?.value.trim();
+  const adminPass = el("as-password")?.value.trim();
 
   if (!name || !city || !email || !adminName || !adminPhone || !adminPass) {
-    Toast.error('Validation', 'Name, city, admin email, name, phone and password are all required');
+    Toast.error(
+      "Validation",
+      "Name, city, admin email, name, phone and password are all required",
+    );
     return;
   }
 
-  const btn = el('as-submit-btn');
+  const btn = el("as-submit-btn");
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
 
-  const address = el('as-address')?.value.trim();
-  if (!address) { Toast.error('Validation', 'Address is required'); btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Create & Activate Society'; return; }
+  const address = el("as-address")?.value.trim();
+  if (!address) {
+    Toast.error("Validation", "Address is required");
+    btn.disabled = false;
+    btn.innerHTML =
+      '<i class="fa-solid fa-check-circle"></i> Create & Activate Society';
+    return;
+  }
 
   try {
-    const socRes = await API.post('/superadmin/societies', {
+    const socRes = await API.post("/superadmin/societies", {
       name,
       address,
       city,
-      state: el('as-state')?.value.trim() || '',
-      country: 'India',
-      pincode: el('as-pincode')?.value.trim() || '',
-      plan: el('as-plan')?.value || 'starter',
+      state: el("as-state")?.value.trim() || "",
+      country: "India",
+      pincode: el("as-pincode")?.value.trim() || "",
+      plan: el("as-plan")?.value || "starter",
       contact_person: adminName,
       contact_phone: adminPhone,
       contact_email: email,
-      registration_id: State.saAddRegId || null
+      registration_id: State.saAddRegId || null,
     });
 
     const societyId = socRes.society_id || socRes.id;
 
-    await API.post(`/superadmin/societies/${societyId}/admin`, { 
-      name: adminName, email, phone: adminPhone, password: adminPass 
+    await API.post(`/superadmin/societies/${societyId}/admin`, {
+      name: adminName,
+      email,
+      phone: adminPhone,
+      password: adminPass,
     });
 
-    Toast.success('Success', 'Society and Admin created successfully');
+    Toast.success("Success", "Society and Admin created successfully");
     State.saAddRegId = null;
-    saNavigate('sa-societies');
+    saNavigate("sa-societies");
   } catch (err) {
-    Toast.error('Creation Failed', err.message);
+    Toast.error("Creation Failed", err.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Create & Activate Society';
+    btn.innerHTML =
+      '<i class="fa-solid fa-check-circle"></i> Create & Activate Society';
   }
 }
 
 function saCreateAdmin(socId, socName) {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
-  overlay.id = 'create-admin-modal';
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay open";
+  overlay.id = "create-admin-modal";
   overlay.innerHTML = `
     <div class="modal modal-sm">
       <div class="modal-header">
@@ -3068,26 +3928,40 @@ function saCreateAdmin(socId, socName) {
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) Modal.close('create-admin-modal'); });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) Modal.close("create-admin-modal");
+  });
 }
 
 async function saCreateAdminSubmit(socId) {
-  const name = el('ca-name')?.value.trim();
-  const email = el('ca-email')?.value.trim();
-  const phone = el('ca-phone')?.value.trim();
-  const password = el('ca-pass')?.value.trim() || 'admin@123';
-  if (!name || !email || !phone) { Toast.error('Validation', 'All fields required'); return; }
-  const btn = el('ca-btn');
+  const name = el("ca-name")?.value.trim();
+  const email = el("ca-email")?.value.trim();
+  const phone = el("ca-phone")?.value.trim();
+  const password = el("ca-pass")?.value.trim() || "admin@123";
+  if (!name || !email || !phone) {
+    Toast.error("Validation", "All fields required");
+    return;
+  }
+  const btn = el("ca-btn");
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   try {
-    await API.post(`/superadmin/societies/${socId}/admin`, { name, email, phone, password });
-    el('ca-result').innerHTML = `<div style="background:var(--green-50);border:1px solid var(--green-200);border-radius:var(--radius-md);padding:12px;margin-top:12px;font-size:13px;color:var(--green-800)"><i class="fa-solid fa-check-circle"></i> Admin created! Credentials: <strong>${phone}</strong> / <strong>${password}</strong></div>`;
-    Toast.success('Admin Created', `${name} can now login`);
-    btn.innerHTML = 'Done';
-    setTimeout(() => { Modal.close('create-admin-modal'); renderSASocieties(); }, 2000);
+    await API.post(`/superadmin/societies/${socId}/admin`, {
+      name,
+      email,
+      phone,
+      password,
+    });
+    el("ca-result").innerHTML =
+      `<div style="background:var(--green-50);border:1px solid var(--green-200);border-radius:var(--radius-md);padding:12px;margin-top:12px;font-size:13px;color:var(--green-800)"><i class="fa-solid fa-check-circle"></i> Admin created! Credentials: <strong>${phone}</strong> / <strong>${password}</strong></div>`;
+    Toast.success("Admin Created", `${name} can now login`);
+    btn.innerHTML = "Done";
+    setTimeout(() => {
+      Modal.close("create-admin-modal");
+      renderSASocieties();
+    }, 2000);
   } catch (err) {
-    Toast.error('Error', err.message);
+    Toast.error("Error", err.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Admin';
   }
@@ -3095,8 +3969,8 @@ async function saCreateAdminSubmit(socId) {
 
 async function renderSAAdmins() {
   try {
-    const admins = await API.get('/superadmin/admins');
-    const pc = el('sa-page-content');
+    const admins = await API.get("/superadmin/admins");
+    const pc = el("sa-page-content");
     pc.innerHTML = `
       <div class="sa-table-card">
         <div class="sa-table-header">
@@ -3109,8 +3983,12 @@ async function renderSAAdmins() {
               <th>Admin</th><th>Phone</th><th>Society</th><th>Status</th><th>Created</th><th>Actions</th>
             </tr></thead>
             <tbody>
-              ${admins.length === 0 ? `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-400)">No admins yet</td></tr>` :
-              admins.map(a => `
+              ${
+                admins.length === 0
+                  ? `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-400)">No admins yet</td></tr>`
+                  : admins
+                      .map(
+                        (a) => `
                 <tr>
                   <td>
                     <div style="display:flex;align-items:center;gap:10px">
@@ -3123,37 +4001,44 @@ async function renderSAAdmins() {
                   </td>
                   <td>${a.phone}</td>
                   <td>${a.society ? `<div style="font-weight:600;font-size:13px">${a.society.name}</div><span class="society-code">${a.society.code}</span>` : '<span style="color:var(--gray-400)">—</span>'}</td>
-                  <td><span class="badge badge-${a.isActive ? 'approved' : 'suspended'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
+                  <td><span class="badge badge-${a.isActive ? "approved" : "suspended"}">${a.isActive ? "Active" : "Inactive"}</span></td>
                   <td>${formatDate(a.createdAt)}</td>
                   <td>
-                    <button class="sa-icon-btn ${a.status === 'active' ? 'danger' : 'success'}" title="${a.status === 'active' ? 'Deactivate' : 'Activate'}" onclick="saToggleAdmin('${a.id}')">
-                      <i class="fa-solid fa-${a.status === 'active' ? 'ban' : 'check'}"></i>
+                    <button class="sa-icon-btn ${a.status === "active" ? "danger" : "success"}" title="${a.status === "active" ? "Deactivate" : "Activate"}" onclick="saToggleAdmin('${a.id}')">
+                      <i class="fa-solid fa-${a.status === "active" ? "ban" : "check"}"></i>
                     </button>
                   </td>
-                </tr>`).join('')}
+                </tr>`,
+                      )
+                      .join("")
+              }
             </tbody>
           </table>
         </div>
       </div>`;
-  } catch (err) { showError('Failed to load admins'); }
+  } catch (err) {
+    showError("Failed to load admins");
+  }
 }
 
 async function saToggleAdmin(id) {
   try {
     // Backend needs a specific status toggle endpoint or standard PUT
-    await API.put(`/superadmin/admins/${id}/toggle`, {}); 
-    Toast.info('Updated', `Admin status changed`);
+    await API.put(`/superadmin/admins/${id}/toggle`, {});
+    Toast.info("Updated", `Admin status changed`);
     await renderSAAdmins();
-  } catch (err) { Toast.error('Error', err.message); }
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
 }
 
 function renderSAModals() {
-  return ''; // Modals are created dynamically
+  return ""; // Modals are created dynamically
 }
 
 // Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') Modal.closeAll();
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") Modal.closeAll();
 });
 
 // Start app

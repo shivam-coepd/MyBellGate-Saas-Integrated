@@ -18,6 +18,7 @@ export interface Society {
   contactPhone: string;
   gst?: string;
   pan?: string;
+  registrationId?: string; // Source registration lead ID
   documents: string[];
   status: 'pending' | 'verified' | 'approved' | 'rejected' | 'suspended';
   adminId?: string; // Society Admin user id

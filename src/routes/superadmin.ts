@@ -81,6 +81,54 @@ superAdminRoute.post('/registrations', async (c) => {
   return c.json({ message: 'Registration submitted successfully', id: newReg.id }, 201)
 })
 
+// Approve registration lead → creates society + deletes registration
+superAdminRoute.post('/registrations/:id/approve', async (c) => {
+  const regIdx = societyRegistrations.findIndex(r => r.id === c.req.param('id'))
+  if (regIdx === -1) return c.json({ error: 'Registration not found' }, 404)
+
+  const reg = societyRegistrations[regIdx]
+  if (reg.status === 'approved') return c.json({ error: 'Already approved' }, 400)
+
+  const code = generateSocietyCode(reg.societyName)
+  const id   = nextSocietyId()
+
+  const newSoc: Society = {
+    id, code,
+    name: reg.societyName,
+    address: reg.address || '', city: reg.city, state: reg.state || '', pincode: reg.pincode || '',
+    towers: reg.towers || 1, totalFlats: reg.totalFlats || 0,
+    contactName: reg.contactName, contactEmail: reg.contactEmail, contactPhone: reg.contactPhone,
+    gst: reg.gst, pan: reg.pan,
+    registrationId: reg.id,
+    documents: [],
+    status: 'approved',
+    inviteLink: `https://mygatebell.com/join/${code}`,
+    createdAt: new Date().toISOString(),
+    plan: 'starter',
+    stats: { residents: 0, visitors: 0, complaints: 0 }
+  }
+  societies.push(newSoc)
+
+  // Create admin user
+  const password = 'Admin@' + Math.floor(1000 + Math.random() * 9000)
+  const adminId  = nextUserId()
+  const newAdmin: User = {
+    id: adminId, name: reg.contactName, email: reg.contactEmail, phone: reg.contactPhone,
+    password, role: 'admin', societyId: id,
+    createdAt: new Date().toISOString(), isActive: true
+  }
+  users.push(newAdmin)
+  newSoc.adminId = adminId
+
+  // Delete the registration — it now lives in societies table
+  societyRegistrations.splice(regIdx, 1)
+
+  return c.json({
+    society_id: id, society_name: reg.societyName, code,
+    admin_email: reg.contactEmail, admin_phone: reg.contactPhone, password
+  }, 201)
+})
+
 // Update registration status
 superAdminRoute.put('/registrations/:id', async (c) => {
   const idx = societyRegistrations.findIndex(r => r.id === c.req.param('id'))

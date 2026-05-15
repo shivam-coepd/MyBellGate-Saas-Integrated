@@ -1,7 +1,77 @@
-import React from "react";
+import React, { useState } from "react";
 import { ArrowRight, CheckCircle2, Package, Users, User, Fingerprint, Landmark, Truck, Headphones, CalendarDays, MessageSquare, Lock, Eye, ShieldCheck, Star, Verified, QrCode, Building2 } from "lucide-react";
 
+const API_BASE = "/api";
+
+async function submitSocietyRegistration(data: Record<string, string | number | null>) {
+  const res = await fetch(`${API_BASE}/public/society-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok || json.status === false) {
+    throw new Error(json.message || "Submission failed. Please try again.");
+  }
+  return json;
+}
+
 const Home: React.FC = () => {
+  const [form, setForm] = useState({
+    societyName: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    towers: "",
+    totalFlats: "",
+    contactName: "",
+    contactEmail: "",
+    contactPhone: "",
+    gst: "",
+    pan: "",
+    message: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!form.societyName || !form.city || !form.contactName || !form.contactEmail || !form.contactPhone) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await submitSocietyRegistration({
+        societyName: form.societyName,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        pincode: form.pincode,
+        towers: form.towers ? parseInt(form.towers) : 1,
+        totalFlats: form.totalFlats ? parseInt(form.totalFlats) : 0,
+        contactName: form.contactName,
+        contactEmail: form.contactEmail,
+        contactPhone: form.contactPhone,
+        gst: form.gst || null,
+        pan: form.pan || null,
+        message: form.message,
+      });
+      setSubmitted(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-surface font-body-md text-on-background scroll-smooth">
       {/* Hero Section */}
@@ -428,7 +498,7 @@ const Home: React.FC = () => {
       {/* Testimonials */}
       <section className="bg-white py-section_padding">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="grid md:grid-cols-3 gap-8 mb-20">
+          <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-surface rounded-xl p-8 shadow-sm hover:shadow-ambient transition-all border border-transparent hover:border-secondary/10">
               <div className="flex gap-1 text-secondary mb-6">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -514,13 +584,6 @@ const Home: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap justify-center gap-12 opacity-40 filter grayscale">
-            <div className="text-xl font-bold font-h2">SOBHA</div>
-            <div className="text-xl font-bold font-h2">GODREJ</div>
-            <div className="text-xl font-bold font-h2">LODHA</div>
-            <div className="text-xl font-bold font-h2">DLF</div>
-            <div className="text-xl font-bold font-h2">BRIGADE</div>
-          </div>
         </div>
       </section>
 
@@ -548,41 +611,219 @@ const Home: React.FC = () => {
             </div>
           </div>
           <div className="bg-white p-10 rounded-xl shadow-2xl">
-            <form className="space-y-6">
-              <div>
-                <label className="font-label-caps block mb-2 text-primary">
-                  Full Name
-                </label>
-                <input
-                  className="w-full bg-[#F1F3F9] border-none rounded-[10px] focus:ring-secondary p-4"
-                  placeholder="Enter your name"
-                  type="text"
-                />
+            {submitted ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CheckCircle2 className="w-16 h-16 text-secondary mb-4" />
+                <h3 className="font-h2 text-2xl text-primary mb-2">Request Submitted!</h3>
+                <p className="text-on-surface-variant">We'll get back to you within 24 hours.</p>
               </div>
-              <div>
-                <label className="font-label-caps block mb-2 text-primary">
-                  Work Email
-                </label>
-                <input
-                  className="w-full bg-[#F1F3F9] border-none rounded-[10px] focus:ring-secondary p-4"
-                  placeholder="Enter your email"
-                  type="email"
-                />
-              </div>
-              <div>
-                <label className="font-label-caps block mb-2 text-primary">
-                  Community Name
-                </label>
-                <input
-                  className="w-full bg-[#F1F3F9] border-none rounded-[10px] focus:ring-secondary p-4"
-                  placeholder="e.g. Ferns City"
-                  type="text"
-                />
-              </div>
-              <button className="w-full py-5 bg-secondary text-white font-bold rounded-[10px] shadow-lg hover:brightness-110 active:scale-95 transition-all">
-                Submit Request
-              </button>
-            </form>
+            ) : (
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Society Details */}
+                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Society Details</p>
+                <div>
+                  <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                    Society / Community Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                    placeholder="e.g. Ferns City"
+                    type="text"
+                    name="societyName"
+                    value={form.societyName}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                    Address
+                  </label>
+                  <input
+                    className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                    placeholder="Street / locality"
+                    type="text"
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="e.g. Bengaluru"
+                      type="text"
+                      name="city"
+                      value={form.city}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      State
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="e.g. Karnataka"
+                      type="text"
+                      name="state"
+                      value={form.state}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      Pincode
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="560001"
+                      type="text"
+                      name="pincode"
+                      value={form.pincode}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      Towers
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="1"
+                      type="number"
+                      min="1"
+                      name="towers"
+                      value={form.towers}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      Total Flats
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="100"
+                      type="number"
+                      min="0"
+                      name="totalFlats"
+                      value={form.totalFlats}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Details */}
+                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant pt-2">Contact Details</p>
+                <div>
+                  <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                    Contact Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                    placeholder="Your full name"
+                    type="text"
+                    name="contactName"
+                    value={form.contactName}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="you@example.com"
+                      type="email"
+                      name="contactEmail"
+                      value={form.contactEmail}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="+91 98765 43210"
+                      type="tel"
+                      name="contactPhone"
+                      value={form.contactPhone}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      GST Number
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="Optional"
+                      type="text"
+                      name="gst"
+                      value={form.gst}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                      PAN Number
+                    </label>
+                    <input
+                      className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400"
+                      placeholder="Optional"
+                      type="text"
+                      name="pan"
+                      value={form.pan}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-label-caps block mb-1.5 text-sm font-medium text-primary">
+                    Message
+                  </label>
+                  <textarea
+                    className="w-full bg-[#F1F3F9] border border-gray-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-secondary p-3.5 text-gray-900 placeholder-gray-400 resize-none"
+                    placeholder="Any specific requirements or questions..."
+                    rows={3}
+                    name="message"
+                    value={form.message}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-4 bg-secondary text-white font-bold rounded-[10px] shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Submitting..." : "Submit Request"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </section>
