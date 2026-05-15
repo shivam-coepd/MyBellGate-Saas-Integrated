@@ -3582,6 +3582,7 @@ async function renderSASocieties() {
                     <div class="sa-action-btns">
                       <button class="sa-icon-btn" title="View & Manage" onclick="saViewSociety('${s.id}')"><i class="fa-solid fa-eye"></i></button>
                       ${s.status !== "approved" ? `<button class="sa-icon-btn success" title="Approve" onclick="saApproveSociety('${s.id}')"><i class="fa-solid fa-check"></i></button>` : ""}
+                      ${s.status === "approved" && s.adminId ? `<button class="sa-icon-btn" title="Edit Admin" onclick="saEditSocietyAdmin('${s.id}')"><i class="fa-solid fa-pen"></i></button>` : ""}
                       ${!s.adminId ? `<button class="sa-icon-btn" title="Create Admin" onclick="saCreateAdmin('${s.id}','${s.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-user-plus"></i></button>` : ""}
                       ${s.status !== "suspended" ? `<button class="sa-icon-btn danger" title="Suspend" onclick="saSuspendSociety('${s.id}')"><i class="fa-solid fa-ban"></i></button>` : ""}
                       <button class="sa-icon-btn danger" title="Delete" onclick="saDeleteSociety('${s.id}','${s.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i></button>
@@ -3992,6 +3993,126 @@ async function saCreateAdminSubmit(socId) {
     Toast.error("Error", err.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Admin';
+  }
+}
+
+/**
+ * Open modal to edit the admin for an approved society.
+ * Fetches the society detail to get current admin info and shows a pre-filled form.
+ */
+async function saEditSocietyAdmin(socId) {
+  try {
+    const s = await API.get(`/superadmin/societies/${socId}`);
+    
+    // Remove any existing overlay first to prevent stacking
+    const existing = document.getElementById("edit-admin-modal");
+    if (existing) existing.remove();
+    
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "edit-admin-modal";
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title"><i class="fa-solid fa-pen" style="color:var(--primary-500)"></i> Edit Admin — ${s.name}</span>
+          <button class="modal-close" id="ea-close-icon"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--blue-800)">
+            <i class="fa-solid fa-circle-info"></i> Update the society admin details below. The admin uses these credentials to login.
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Full Name *</label>
+            <input type="text" class="form-input" id="ea-name" value="${s.admin ? s.admin.name : ''}" placeholder="Admin full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Email *</label>
+            <input type="email" class="form-input" id="ea-email" value="${s.admin ? s.admin.email : ''}" placeholder="admin@society.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Phone *</label>
+            <input type="tel" class="form-input" id="ea-phone" value="${s.admin ? s.admin.phone : ''}" placeholder="10-digit mobile">
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password <span style="font-weight:400;color:var(--gray-400)">(leave blank to keep current)</span></label>
+            <input type="text" class="form-input" id="ea-password" placeholder="Min 8 chars to update" autocomplete="off">
+          </div>
+          <div id="ea-err" style="display:none;margin-top:12px;padding:10px 12px;background:var(--red-50);border:1px solid var(--red-200);border-radius:var(--radius-md);font-size:13px;color:var(--red-800)"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="ea-save-btn"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+          <button class="btn btn-ghost" id="ea-cancel-btn">Cancel</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    // Proper close function that removes the DOM element
+    const closeEditAdminModal = () => {
+      overlay.classList.remove("open");
+      document.body.style.overflow = "";
+      setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 300);
+    };
+
+    // Open with animation
+    setTimeout(() => overlay.classList.add("open"), 10);
+
+    // Wire up close buttons
+    document.getElementById("ea-close-icon").onclick = closeEditAdminModal;
+    document.getElementById("ea-cancel-btn").onclick = closeEditAdminModal;
+    
+    // Backdrop click to close
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeEditAdminModal();
+    });
+
+    const errEl = document.getElementById("ea-err");
+    const btn = document.getElementById("ea-save-btn");
+    btn.onclick = async () => {
+      const name = document.getElementById("ea-name").value.trim();
+      const email = document.getElementById("ea-email").value.trim();
+      const phone = document.getElementById("ea-phone").value.trim();
+      const password = document.getElementById("ea-password").value.trim();
+
+      errEl.style.display = "none";
+      if (!name || !email || !phone) {
+        errEl.textContent = "Name, email, and phone are required.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errEl.textContent = "Please enter a valid email address.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (phone.replace(/\D/g, '').length < 10) {
+        errEl.textContent = "Please enter a valid 10-digit phone number.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (password && password.length < 8) {
+        errEl.textContent = "Password must be at least 8 characters.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+      try {
+        const body = { name, email, phone };
+        if (password) body.password = password;
+        await API.put(`/superadmin/societies/${socId}/admin`, body);
+        closeEditAdminModal();
+        Toast.success("Updated", "Admin details updated successfully");
+        await renderSASocieties();
+      } catch (err) {
+        errEl.textContent = err.message || "Update failed";
+        errEl.style.display = "block";
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+      }
+    };
+  } catch (err) {
+    Toast.error("Error", err.message);
   }
 }
 
