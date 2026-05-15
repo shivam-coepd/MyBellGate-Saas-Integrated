@@ -3870,6 +3870,17 @@ async function saCreateSocietyFull() {
     return;
   }
 
+  if (adminPass.length < 8) {
+    Toast.error(
+      "Validation",
+      "Initial password must be at least 8 characters (required for admin account).",
+    );
+    btn.disabled = false;
+    btn.innerHTML =
+      '<i class="fa-solid fa-check-circle"></i> Create & Activate Society';
+    return;
+  }
+
   try {
     const socRes = await API.post("/superadmin/societies", {
       name,
@@ -3885,14 +3896,31 @@ async function saCreateSocietyFull() {
       registration_id: State.saAddRegId || null,
     });
 
-    const societyId = socRes.society_id || socRes.id;
+    const societyId =
+      socRes?.society_id ?? socRes?.societyId ?? socRes?.id ?? null;
+    if (societyId == null || societyId === "") {
+      throw new Error(
+        "Society response did not include an id — cannot create admin. Check the API.",
+      );
+    }
 
-    await API.post(`/superadmin/societies/${societyId}/admin`, {
-      name: adminName,
-      email,
-      phone: adminPhone,
-      password: adminPass,
-    });
+    try {
+      await API.post(`/superadmin/societies/${societyId}/admin`, {
+        name: adminName,
+        email,
+        phone: adminPhone,
+        password: adminPass,
+      });
+    } catch (adminErr) {
+      Toast.error(
+        "Admin setup failed",
+        `${adminErr.message || "Unknown error"} Society #${societyId} was created — open Societies and use “Create Admin” for that society, or delete the orphan row if it was a mistake.`,
+      );
+      btn.disabled = false;
+      btn.innerHTML =
+        '<i class="fa-solid fa-check-circle"></i> Create & Activate Society';
+      return;
+    }
 
     Toast.success("Success", "Society and Admin created successfully");
     State.saAddRegId = null;
