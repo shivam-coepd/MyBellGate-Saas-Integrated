@@ -28,6 +28,19 @@ const State = {
 const API = {
   base: "/api",
   async request(method, endpoint, body = null) {
+    if (
+      typeof SocietyBridge !== "undefined" &&
+      SocietyBridge.isLegacyEndpoint(endpoint) &&
+      State.user?.role !== "super_admin" &&
+      State.user?.role !== "superadmin"
+    ) {
+      try {
+        console.log(`📡 SocietyBridge ${method} ${endpoint}`);
+        return await SocietyBridge.handleRequest(method, endpoint, body);
+      } catch (err) {
+        throw err;
+      }
+    }
     const headers = { "Content-Type": "application/json" };
     if (State.token) {
       headers["Authorization"] = `Bearer ${State.token}`;
@@ -138,6 +151,7 @@ function categoryIcon(cat) {
     other: "fa-circle-question",
     general: "fa-bullhorn",
     maintenance: "fa-wrench",
+    billing: "fa-indian-rupee-sign",
     emergency: "fa-triangle-exclamation",
     event: "fa-calendar-star",
     finance: "fa-indian-rupee-sign",
@@ -257,9 +271,12 @@ async function doLogin(e) {
   try {
     const data = await API.post("/auth/login", { phone, password });
     State.token = data.token;
-    State.user = data.user;
+    State.user =
+      typeof SocietyBridge !== "undefined"
+        ? SocietyBridge.normalizeUser(data.user)
+        : data.user;
     localStorage.setItem("gh_token", data.token);
-    localStorage.setItem("gh_user", JSON.stringify(data.user));
+    localStorage.setItem("gh_user", JSON.stringify(State.user));
     Toast.success("Welcome back!", `Signed in as ${data.user.name}`);
     if (data.user.role === "super_admin" || data.user.role === "superadmin")
       renderSuperAdminApp();
@@ -467,7 +484,7 @@ function renderApp() {
         <div class="sidebar-brand">
           <div class="sidebar-brand-icon"><i class="fa-solid fa-building"></i></div>
           <div class="sidebar-brand-text">
-            <h2>Greenwood Heights</h2>
+            <h2>${State.user.societyName || "MyGateBell"}</h2>
             <p>Society Portal</p>
           </div>
         </div>
@@ -639,6 +656,10 @@ function navigateTo(page) {
 }
 
 // ============ DASHBOARD PAGE ============
+function refreshSocietyCache() {
+  if (typeof SocietyBridge !== "undefined") SocietyBridge.invalidateCache();
+}
+
 async function renderDashboard() {
   const role = State.user.role;
   try {
@@ -652,7 +673,7 @@ async function renderDashboard() {
     else if (role === "guard") renderGuardDashboard(stats, activity);
     else renderResidentDashboard(stats, activity);
   } catch (err) {
-    showError("Failed to load dashboard");
+    showError(err.message || "Failed to load dashboard");
   }
 }
 
@@ -662,10 +683,10 @@ function renderAdminDashboard(stats, activity) {
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title">Good morning, ${State.user.name.split(" ")[0]} 👋</h1>
-        <p class="page-subtitle">Here's what's happening at Greenwood Heights today</p>
+        <p class="page-subtitle">Here's what's happening at ${State.user.societyName || "your society"} today</p>
       </div>
       <div class="page-header-actions">
-        <button class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
+        <button class="btn btn-ghost btn-sm" onclick="refreshSocietyCache();renderDashboard()"><i class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
         <button class="btn btn-primary btn-sm" onclick="navigateTo('visitors')"><i class="fa-solid fa-plus"></i> Add Visitor</button>
       </div>
     </div>
@@ -1058,7 +1079,7 @@ async function renderVisitors() {
 
     setupModalClose("visitor-modal");
   } catch (err) {
-    showError("Failed to load visitors");
+    showError(err.message || "Failed to load visitors");
   }
 }
 
@@ -1359,7 +1380,7 @@ async function renderResidents() {
     setupModalClose("resident-modal");
     setupModalClose("flat-modal");
   } catch (err) {
-    showError("Failed to load residents");
+    showError(err.message || "Failed to load residents");
   }
 }
 
@@ -1710,11 +1731,19 @@ function filterResidents() {
 // ============ COMPLAINTS PAGE ============
 async function renderComplaints() {
   try {
-    const complaints = await API.get(
-      "/complaints" +
-        (State.user.role === "resident" ? `?residentId=${State.user.id}` : ""),
-    );
+    const [complaints, staff] = await Promise.all([
+      API.get(
+        "/complaints" +
+          (State.user.role === "resident"
+            ? `?residentId=${State.user.id}`
+            : ""),
+      ),
+      State.user.role === "admin"
+        ? API.get("/staff")
+        : Promise.resolve([]),
+    ]);
     State.data.complaints = complaints;
+    State.data.staff = staff;
     const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
@@ -1722,7 +1751,11 @@ async function renderComplaints() {
           <h1 class="page-title">Complaint Helpdesk</h1>
           <p class="page-subtitle">${complaints.length} total complaints tracked</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openComplaintModal()"><i class="fa-solid fa-plus"></i> Raise Complaint</button>
+        ${
+          State.user.role === "resident"
+            ? `<button class="btn btn-primary btn-sm" onclick="openComplaintModal()"><i class="fa-solid fa-plus"></i> Raise Complaint</button>`
+            : ""
+        }
       </div>
 
       <div class="card" style="margin-bottom:20px">
@@ -1741,12 +1774,10 @@ async function renderComplaints() {
             </select>
             <select class="form-input" style="width:auto" id="comp-cat-filter" onchange="filterComplaints()">
               <option value="">All Categories</option>
-              <option value="plumbing">Plumbing</option>
-              <option value="electrical">Electrical</option>
+              <option value="maintenance">Maintenance</option>
               <option value="security">Security</option>
-              <option value="cleaning">Cleaning</option>
-              <option value="parking">Parking</option>
-              <option value="lift">Lift</option>
+              <option value="billing">Billing</option>
+              <option value="general">General</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -1763,7 +1794,7 @@ async function renderComplaints() {
     setupModalClose("complaint-modal");
     setupModalClose("complaint-detail-modal");
   } catch (err) {
-    showError("Failed to load complaints");
+    showError(err.message || "Failed to load complaints");
   }
 }
 
@@ -1842,12 +1873,10 @@ function getComplaintModal() {
               <label class="form-label">Category <span class="required">*</span></label>
               <select class="form-input" id="cp-category">
                 <option value="">Select category</option>
-                <option value="plumbing">🔧 Plumbing</option>
-                <option value="electrical">⚡ Electrical</option>
+                <option value="maintenance">🔧 Maintenance</option>
                 <option value="security">🛡️ Security</option>
-                <option value="cleaning">🧹 Cleaning</option>
-                <option value="parking">🚗 Parking</option>
-                <option value="lift">🛗 Lift</option>
+                <option value="billing">💰 Billing</option>
+                <option value="general">📋 General</option>
                 <option value="other">❓ Other</option>
               </select>
             </div>
@@ -1857,6 +1886,7 @@ function getComplaintModal() {
                 <option value="low">🟢 Low</option>
                 <option value="medium" selected>🟡 Medium</option>
                 <option value="high">🔴 High</option>
+                <option value="urgent">🚨 Urgent</option>
               </select>
             </div>
           </div>
@@ -1882,8 +1912,14 @@ function openComplaintModal() {
 }
 
 async function openComplaintDetail(id) {
-  const c = State.data.complaints.find((x) => x.id === id);
-  if (!c) return;
+  let c = State.data.complaints.find((x) => x.id === id);
+  try {
+    c = await API.get(`/complaints/${id}`);
+    const idx = State.data.complaints.findIndex((x) => x.id === id);
+    if (idx >= 0) State.data.complaints[idx] = c;
+  } catch {
+    if (!c) return;
+  }
   el("cdm-title").textContent = c.title;
   el("cdm-body").innerHTML = `
     <div class="flex items-center gap-3 mb-4">
@@ -1912,8 +1948,16 @@ async function openComplaintDetail(id) {
           ${["open", "in_progress", "resolved", "closed"].map((s) => `<button class="btn btn-sm ${c.status === s ? "btn-primary" : "btn-ghost"}" onclick="updateComplaintStatus('${c.id}','${s}')">${s.replace("_", " ")}</button>`).join("")}
         </div>
         <div class="form-group mt-3">
-          <label class="form-label">Assigned To</label>
-          <input type="text" class="form-input" id="cd-assign" value="${c.assignedTo || ""}" placeholder="Team or person name">
+          <label class="form-label">Assign To</label>
+          <select class="form-input" id="cd-assign">
+            <option value="">Select team member...</option>
+            ${(State.data.staff || [])
+              .map(
+                (s) =>
+                  `<option value="${s.id}" ${c.assignedToId === s.id ? "selected" : ""}>${s.name} (${s.role})</option>`,
+              )
+              .join("")}
+          </select>
           <button class="btn btn-primary btn-sm mt-2" onclick="assignComplaint('${c.id}')"><i class="fa-solid fa-user-check"></i> Assign</button>
         </div>
       </div>`
@@ -1968,10 +2012,7 @@ async function submitComplaint() {
       description,
       category,
       priority,
-      flatId: flat?.id || "",
-      flatNo: flat?.flatNo || "N/A",
       residentId: State.user.id,
-      residentName: State.user.name,
     });
     Toast.success("Submitted", "Your complaint has been registered");
     Modal.close("complaint-modal");
@@ -1989,6 +2030,7 @@ async function updateComplaintStatus(id, status) {
       `Complaint status changed to ${status.replace("_", " ")}`,
     );
     Modal.close("complaint-detail-modal");
+    refreshSocietyCache();
     renderComplaints();
   } catch (err) {
     Toast.error("Error", err.message);
@@ -1996,10 +2038,17 @@ async function updateComplaintStatus(id, status) {
 }
 
 async function assignComplaint(id) {
-  const assignedTo = el("cd-assign")?.value.trim();
+  const assignedToId = el("cd-assign")?.value;
+  if (!assignedToId) {
+    Toast.warning("Assign", "Please select a team member");
+    return;
+  }
   try {
-    await API.put(`/complaints/${id}`, { assignedTo });
+    await API.put(`/complaints/${id}`, { assignedToId });
     Toast.success("Assigned", "Complaint assigned successfully");
+    Modal.close("complaint-detail-modal");
+    refreshSocietyCache();
+    renderComplaints();
   } catch (err) {
     Toast.error("Error", err.message);
   }
@@ -2051,7 +2100,7 @@ function filterComplaints() {
       c.residentName.toLowerCase().includes(search) ||
       c.flatNo.toLowerCase().includes(search);
     const mst = !status || c.status === status;
-    const mc = !cat || c.category === cat;
+    const mc = !cat || c.category === cat || c.apiCategory === cat;
     return ms && mst && mc;
   });
   el("complaints-list").innerHTML = renderComplaintCards(filtered);
@@ -2091,7 +2140,7 @@ async function renderNotices() {
     setupModalClose("notice-modal");
     setupModalClose("notice-detail-modal");
   } catch (err) {
-    showError("Failed to load notices");
+    showError(err.message || "Failed to load notices");
   }
 }
 
@@ -2290,6 +2339,9 @@ async function renderBilling() {
       API.get("/billing/stats"),
     ]);
     State.data.bills = bills;
+    const billMonths = [
+      ...new Set(bills.map((b) => b.month).filter(Boolean)),
+    ].sort().reverse();
     const pc = el("page-content");
     pc.innerHTML = `
       <div class="page-header">
@@ -2318,9 +2370,15 @@ async function renderBilling() {
             </select>
             <select class="form-input" style="width:auto" id="bill-month-filter" onchange="filterBills()">
               <option value="">All Months</option>
-              <option value="2024-04">April 2024</option>
-              <option value="2024-03">March 2024</option>
-              <option value="2024-02">February 2024</option>
+              ${billMonths
+                .map((m) => {
+                  const label = new Date(m + "-01").toLocaleDateString("en-IN", {
+                    month: "long",
+                    year: "numeric",
+                  });
+                  return `<option value="${m}">${label}</option>`;
+                })
+                .join("")}
             </select>
           </div>
         </div>
@@ -2336,7 +2394,7 @@ async function renderBilling() {
     setupModalClose("generate-bills-modal");
     setupModalClose("pay-bill-modal");
   } catch (err) {
-    showError("Failed to load billing");
+    showError(err.message || "Failed to load billing");
   }
 }
 
@@ -2529,7 +2587,10 @@ async function renderSecurity() {
 
     const pending = visitors.filter((v) => v.status === "pending");
     const approved = visitors.filter(
-      (v) => v.status === "approved" || v.status === "exited",
+      (v) =>
+        v.status === "approved" ||
+        v.status === "entered" ||
+        v.status === "exited",
     );
 
     const pc = el("page-content");
@@ -2631,7 +2692,7 @@ async function renderSecurity() {
         </div>
       </div>`;
   } catch (err) {
-    showError("Failed to load security panel");
+    showError(err.message || "Failed to load security panel");
   }
 }
 
@@ -2658,7 +2719,7 @@ function renderSecurityVisitorCard(v, isPending) {
           <button class="btn btn-success flex-1" onclick="approveVisitorSec('${v.id}')"><i class="fa-solid fa-check"></i> Approve</button>
           <button class="btn btn-danger flex-1" onclick="rejectVisitorSec('${v.id}')"><i class="fa-solid fa-times"></i> Reject</button>
         </div>`
-          : v.status === "approved"
+          : v.status === "approved" || v.status === "entered"
             ? `
         <div class="visitor-actions">
           <button class="btn btn-ghost flex-1" onclick="exitVisitorSec('${v.id}')"><i class="fa-solid fa-door-open"></i> Log Exit</button>
@@ -2666,7 +2727,7 @@ function renderSecurityVisitorCard(v, isPending) {
             : ""
       }
     </div>`;
-}
+  }
 
 async function logVisitorSecurity(isDirect) {
   const name = el("sg-name").value.trim();
@@ -2743,10 +2804,10 @@ function showError(msg) {
     <div class="empty-state" style="padding:80px 20px">
       <div class="empty-state-icon" style="color:var(--red-400)"><i class="fa-solid fa-circle-exclamation"></i></div>
       <div class="empty-state-title">Something went wrong</div>
-      <p class="empty-state-text">${msg}. Please try refreshing the page.</p>
-      <button class="btn btn-primary" onclick="navigateTo('${State.currentPage}')"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+      <p class="empty-state-text">${typeof msg === "string" ? msg : msg?.message || "Please try again"}</p>
+      <button class="btn btn-primary" onclick="refreshSocietyCache();navigateTo('${State.currentPage}')"><i class="fa-solid fa-rotate-right"></i> Retry</button>
     </div>`;
-  Toast.error("Error", msg);
+  Toast.error("Error", typeof msg === "string" ? msg : msg?.message || "Error");
 }
 
 function setupModalClose(id) {
@@ -2771,6 +2832,9 @@ function init() {
     State.token = savedToken;
     try {
       State.user = JSON.parse(savedUser);
+      if (typeof SocietyBridge !== "undefined") {
+        State.user = SocietyBridge.normalizeUser(State.user);
+      }
       console.log("✅ User parsed successfully:", State.user);
       console.log("User role:", State.user.role);
 
