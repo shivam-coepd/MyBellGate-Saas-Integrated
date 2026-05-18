@@ -23,10 +23,11 @@ const State = {
   charts: {},
   modals: {},
 };
+window.State = State;
 
 // ============ API CLIENT ============
 const API = {
-  base: "/api",
+  base: "https://app.mygatebell.com/backend",
   async request(method, endpoint, body = null) {
     if (
       typeof SocietyBridge !== "undefined" &&
@@ -344,7 +345,7 @@ function togglePasswordVisibility(inputId, toggleId) {
 function setDemoCredentials(role) {
   const creds = {
     superadmin: { phone: "1122334455", password: "Pass@123" },
-    admin: { phone: "6677889900", password: "Pass@123" },
+    admin: { phone: "9383673712", password: "Admin@123" },
     resident: { phone: "8976351526", password: "Pass@123" },
   };
   const c = creds[role];
@@ -366,8 +367,8 @@ function updateDemoHint(role) {
       label: "👑 Super Admin — Manage all societies",
     },
     admin: {
-      phone: "6677889900",
-      pass: "Pass@123",
+      phone: "9383673712",
+      pass: "Admin@123",
       label: "Admin Access — Full control",
     },
     resident: {

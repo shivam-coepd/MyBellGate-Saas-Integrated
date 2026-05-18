@@ -59,7 +59,17 @@ const SocietyBridge = (() => {
   }
 
   function societyId() {
-    const u = window.State?.user;
+    let u = window.State?.user;
+    if (!u) {
+      try {
+        const savedUser = localStorage.getItem("gh_user") || localStorage.getItem("user");
+        if (savedUser) {
+          u = JSON.parse(savedUser);
+          if (window.State) window.State.user = u;
+        }
+      } catch (e) {}
+    }
+    console.log("societyId called with user :- ", u);
     return u?.society_id ?? u?.societyId ?? null;
   }
 
@@ -72,12 +82,13 @@ const SocietyBridge = (() => {
 
   async function rawRequest(method, endpoint, body) {
     const headers = { "Content-Type": "application/json" };
-    if (window.State?.token) {
-      headers.Authorization = `Bearer ${window.State.token}`;
+    let token = window.State?.token || localStorage.getItem("gh_token") || localStorage.getItem("token");
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
     }
     const opts = { method, headers };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(`/api${endpoint}`, opts);
+    const res = await fetch(`https://app.mygatebell.com/backend${endpoint}`, opts);
     let json;
     try {
       json = await res.json();
@@ -267,6 +278,7 @@ const SocietyBridge = (() => {
 
   async function getCompleteSociety(force) {
     const sid = societyId();
+    console.log("getCompleteSociety called with society id :- ", sid);
     if (!sid) throw new Error("No society linked to this account");
     const now = Date.now();
     if (!force && completeCache && now - completeCacheAt < 45000) {

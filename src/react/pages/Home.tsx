@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowRight, CheckCircle2, Package, Users, User, Fingerprint, Landmark, Truck, Headphones, CalendarDays, MessageSquare, Lock, Eye, ShieldCheck, Star, Verified, QrCode, Building2 } from "lucide-react";
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "https://app.mygatebell.com/backend";
 
 async function submitSocietyRegistration(data: Record<string, string | number | null>) {
   const res = await fetch(`${API_BASE}/public/society-registrations`, {
