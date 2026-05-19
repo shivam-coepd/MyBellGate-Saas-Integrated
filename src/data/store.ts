@@ -88,7 +88,7 @@ export interface Flat {
   floor: number;
   block: string;
   area: number;
-  type: string;
+  type: '1RK' | '1BHK' | '2BHK' | '3BHK' | '4BHK' | '4BHK+';
   status: 'occupied' | 'vacant';
   ownerId?: string;
   tenantId?: string;

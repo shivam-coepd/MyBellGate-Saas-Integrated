@@ -234,6 +234,40 @@ class ApiClient {
     });
   }
 
+  async createSingleFlatWithOwner(data: {
+    building_id: number | string;
+    flat_number: string;
+    flat_type?: string;
+    floor_number?: string;
+    area_sqft?: number;
+    society_id: number;
+    user_role?: 'owner' | 'renting_family' | 'renting_flatmates';
+    occupancy_status?: 'residing' | 'let_out' | 'empty';
+    owner?: {
+      name: string;
+      email?: string;
+      phone: string;
+      password: string;
+      role?: 'resident';
+      society_id: number;
+      resident_type?: 'owner' | 'tenant' | 'family_member' | 'other';
+      bio?: string;
+      profession?: string;
+      hometown?: string;
+      cover_image_url?: string;
+      profile_image?: string;
+    };
+  }) {
+    return this.request('/flat/add-home', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFlatOwner(flatId: string | number) {
+    return this.request(`/flats/${flatId}/owner`);
+  }
+
   async getAllFlatsBySociety(societyId: string) {
     return this.request(`/flats/all-by-society/${societyId}`);
   }

@@ -226,24 +226,37 @@ const SocietyBridge = (() => {
     const ownerName = f.owner_name || null;
     const tenantName = f.tenant_name || null;
     const displayName = ownerName || tenantName;
+    const ownerEmail = f.owner_email || null;
+    const ownerPhone = f.owner_phone || null;
+    const tenantEmail = f.tenant_email || null;
+    const tenantPhone = f.tenant_phone || null;
+    
+    const activeResName = tenantName || ownerName;
+    const activeResPhone = tenantPhone || ownerPhone;
+    const activeResEmail = tenantEmail || ownerEmail;
+
     return {
       id: String(f.id),
       flatNo: f.flat_number || f.flatNo,
       block: f.building_name || f.block || "Block A",
       floor: parseInt(f.floor_number, 10) || 1,
       area: parseInt(f.area_sqft, 10) || 0,
-      type: f.type || "2BHK",
+      type: f.flat_type || f.type || "2BHK",
       status:
         f.is_occupied == 1 || f.is_occupied === true ? "occupied" : "vacant",
       buildingId: f.building_id ? String(f.building_id) : null,
       ownerId: f.owner_id ? String(f.owner_id) : null,
       tenantId: f.tenant_id ? String(f.tenant_id) : null,
       ownerName: displayName,
-      owner: displayName ? { name: displayName, phone: f.owner_phone } : null,
+      owner: displayName ? { name: activeResName, phone: activeResPhone, email: activeResEmail } : null,
       residents: [
         ...(f.owner_id ? [String(f.owner_id)] : []),
         ...(f.tenant_id ? [String(f.tenant_id)] : []),
       ],
+      userRole: f.user_role || '',
+      occupancyStatus: f.occupancy_status || '',
+      ownerDetails: ownerName ? { name: ownerName, phone: ownerPhone, email: ownerEmail } : null,
+      tenantDetails: tenantName ? { name: tenantName, phone: tenantPhone, email: tenantEmail } : null,
     };
   }
 
@@ -683,17 +696,62 @@ const SocietyBridge = (() => {
         role: "resident",
         status: "active",
       });
+      const newUserId = String(created.user_id);
+
+      // Assign flat if provided
+      if (body.flatId && newUserId) {
+        const isOwner = body.userRole === "owner";
+        const flatPatch = {
+          user_role: body.userRole || "owner",
+          occupancy_status: body.occupancyStatus || "residing",
+        };
+        if (isOwner) {
+          flatPatch.owner_id = parseInt(newUserId, 10);
+        } else {
+          flatPatch.tenant_id = parseInt(newUserId, 10);
+        }
+        try {
+          await rawRequest("PUT", `/flats/${body.flatId}`, flatPatch);
+        } catch (e) {
+          console.warn("Flat assignment after user creation failed:", e.message);
+        }
+      }
+
       invalidateCache();
-      return { id: String(created.user_id) };
+      return { id: newUserId };
     }
 
     if (method === "PUT" && /^\/residents\/\d+$/.test(path)) {
       const id = path.split("/")[2];
+      const userUpdateData = {};
+      if (body.name)  userUpdateData.name  = body.name;
+      if (body.email) userUpdateData.email = body.email;
+
+      if (Object.keys(userUpdateData).length > 0) {
+        await rawRequest("PUT", `/admin/users/${id}`, userUpdateData);
+      }
+
+      // Reassign flat if flatId is provided
+      if (body.flatId) {
+        const isOwner = body.userRole === "owner";
+        const flatPatch = {
+          user_role: body.userRole || "owner",
+          occupancy_status: body.occupancyStatus || "residing",
+        };
+        if (isOwner) {
+          flatPatch.owner_id = parseInt(id, 10);
+        } else {
+          flatPatch.tenant_id = parseInt(id, 10);
+        }
+        try {
+          await rawRequest("PUT", `/flats/${body.flatId}`, flatPatch);
+        } catch (e) {
+          console.warn("Flat reassignment failed:", e.message);
+        }
+      }
+
       invalidateCache();
-      return rawRequest("PUT", `/admin/users/${id}`, {
-        name: body.name,
-        email: body.email,
-      });
+      return { id: String(id) };
     }
 
     if (method === "DELETE" && /^\/residents\/\d+$/.test(path)) {
@@ -709,6 +767,7 @@ const SocietyBridge = (() => {
         flats: [
           {
             flat_number: body.flatNo,
+            flat_type: body.type,
             floor_number: String(body.floor || 1),
             area_sqft: body.area || null,
           },
@@ -716,17 +775,70 @@ const SocietyBridge = (() => {
       });
       invalidateCache();
       const flat = (result.flats || [])[0];
+
+      if (flat && body.ownerName) {
+        const payload = {
+          owner_type: body.userRole === 'owner' ? 'Owner' : 'Tenant',
+          user_role: body.userRole,
+          occupancy_status: body.occupancyStatus,
+        };
+        const userData = {
+            name: body.ownerName,
+            email: body.ownerEmail,
+            phone: body.ownerPhone,
+            password: body.ownerPassword || "Pass@123",
+            role: "resident",
+            status: "active"
+        };
+        if (payload.owner_type === 'Owner') payload.owner = userData;
+        else payload.tenant = userData;
+        
+        await rawRequest("PUT", `/flats/${flat.id}`, payload);
+      }
+
       return { id: String(flat?.id || "") };
     }
 
     if (method === "PUT" && /^\/residents\/flats\/\d+$/.test(path)) {
-      throw new Error(
-        "Flat update is not available via API yet. Contact support or recreate the flat.",
-      );
+      const id = path.split("/")[3];
+      const building = await ensureBuilding(body.block || "Block A");
+      const payload = {
+        flat_number: body.flatNo,
+        flat_type: body.type,
+        floor_number: body.floor,
+        area_sqft: body.area,
+        building_id: parseInt(building.id, 10)
+      };
+      
+      if (body.userRole) {
+        payload.user_role = body.userRole;
+      }
+      if (body.occupancyStatus) {
+        payload.occupancy_status = body.occupancyStatus;
+      }
+
+      if (body.ownerName) {
+        payload.owner_type = body.userRole === 'owner' ? 'Owner' : 'Tenant';
+        const userData = {
+            name: body.ownerName,
+            email: body.ownerEmail,
+            phone: body.ownerPhone,
+            password: body.ownerPassword || "Pass@123",
+            role: "resident",
+            status: "active"
+        };
+        if (payload.owner_type === 'Owner') payload.owner = userData;
+        else payload.tenant = userData;
+      }
+
+      invalidateCache();
+      return rawRequest("PUT", `/flats/${id}`, payload);
     }
 
     if (method === "DELETE" && /^\/residents\/flats\/\d+$/.test(path)) {
-      throw new Error("Flat delete is not available via API yet.");
+      const id = path.split("/")[3];
+      invalidateCache();
+      return rawRequest("DELETE", `/flats/${id}`);
     }
 
     if (method === "POST" && path === "/complaints") {

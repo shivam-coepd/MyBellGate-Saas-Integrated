@@ -15,8 +15,9 @@ interface Building {
 interface Flat {
   id: string;
   flat_number: string;
-  floor_number: string;
-  area_sqft: number;
+  flat_type: '1RK' | '1BHK' | '2BHK' | '3BHK' | '4BHK' | '4BHK+';
+  floor_number: string | null;
+  area_sqft: number | null;
   building_id: string;
   owner_id: string | null;
   tenant_id: string | null;
@@ -133,16 +134,39 @@ const BuildingManagement: React.FC = () => {
 
   const handleCreateFlats = async (data: any) => {
     try {
-      const response = await apiClient.createFlats(data);
+      const response = await apiClient.createSingleFlatWithOwner({
+        building_id: selectedBuilding!.id,
+        flat_number: data.flat_number,
+        flat_type:  data.flat_type,
+        floor_number: data.floor_number || '',
+        area_sqft: data.area_sqft ? parseFloat(data.area_sqft) : null,
+        society_id: user?.society_id || 0,
+        user_role: data.user_role || 'owner',
+        occupancy_status: data.occupancy_status || 'residing',
+        owner: {
+          name: data.owner_name,
+          email: data.owner_email || null,
+          phone: data.owner_phone,
+          password: data.owner_password,
+          role: 'resident',
+          society_id: user?.society_id || 0,
+          resident_type: 'owner',
+          bio: null,
+          profession: null,
+          hometown: null,
+          cover_image_url: null,
+          profile_image: null,
+        },
+      });
       if (response.success) {
-        alert('Flats created successfully');
+        alert('Flat and owner added successfully');
         setShowAddFlatsModal(false);
         if (selectedBuilding) {
           loadFlats(selectedBuilding.id);
         }
       }
     } catch (error) {
-      alert('Error creating flats');
+      alert('Error creating flat: ' + (error as Error).message);
     }
   };
 
@@ -239,18 +263,18 @@ const BuildingManagement: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {flats.map((flat) => (
-                        <div
-                          key={flat.id}
-                          className={`p-4 rounded-lg border-2 ${
-                            flat.is_occupied
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-gray-50 border-gray-200'
+                        <div key={flat.id} className={`p-4 rounded-lg border-2 ${
+                          flat.is_occupied
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-gray-50 border-gray-200'
                           }`}
                         >
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <div className="font-semibold text-gray-900">{flat.flat_number}</div>
-                              <div className="text-sm text-gray-500">Floor: {flat.floor_number}</div>
+                              <div className="text-sm text-gray-500">
+                                {flat.flat_type} · Floor: {flat.floor_number || '—'}
+                              </div>
                             </div>
                             <span
                               className={`px-2 py-1 text-xs rounded-full ${
@@ -263,7 +287,7 @@ const BuildingManagement: React.FC = () => {
                             </span>
                           </div>
                           <div className="text-sm text-gray-600">
-                            Area: {flat.area_sqft} sqft
+                            Area: {flat.area_sqft ?? '—'} sqft
                           </div>
                           {flat.is_occupied && (
                             <div className="text-sm text-gray-500 mt-1">
@@ -355,55 +379,185 @@ const BuildingManagement: React.FC = () => {
       {/* Add Flats Modal */}
       {showAddFlatsModal && selectedBuilding && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Add Flats to {selectedBuilding.name}</h2>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4">Add Flat to {selectedBuilding.name}</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-                const creationType = formData.get('creation_type');
-                
-                if (creationType === 'floor') {
-                  const floors = JSON.parse(formData.get('floors') as string);
-                  handleCreateFlats({
-                    building_id: selectedBuilding.id,
-                    floors: floors.map((f: any) => ({
-                      floor_number: f.floor,
-                      flats: parseInt(f.flats),
-                      area_sqft: parseFloat(f.area),
-                    })),
-                  });
-                } else {
-                  const flatsList = JSON.parse(formData.get('flats_list') as string);
-                  handleCreateFlats({
-                    building_id: selectedBuilding.id,
-                    flats: flatsList.map((f: any) => ({
-                      flat_number: f.flat_number,
-                      floor_number: f.floor_number,
-                      area_sqft: parseFloat(f.area_sqft),
-                    })),
-                  });
-                }
+                handleCreateFlats({
+                  flat_number:      formData.get('flat_number'),
+                  flat_type:        formData.get('flat_type'),
+                  floor_number:     formData.get('floor_number'),
+                  area_sqft:        formData.get('area_sqft'),
+                  user_role:        formData.get('user_role'),
+                  occupancy_status: formData.get('occupancy_status'),
+                  owner_name:       formData.get('owner_name'),
+                  owner_email:      formData.get('owner_email'),
+                  owner_phone:      formData.get('owner_phone'),
+                  owner_password:   formData.get('owner_password'),
+                });
               }}
-              className="space-y-4"
+              className="space-y-6"
             >
+              {/* ── Flat Details ── */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Creation Type</label>
-                <select
-                  name="creation_type"
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
-                >
-                  <option value="floor">Floor-based (bulk)</option>
-                  <option value="explicit">Explicit list</option>
-                </select>
-              </div>
-              
-              <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded">
-                For now, please use the backend API directly to add flats. This interface will be enhanced soon.
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 border-b pb-1">
+                  Flat Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Flat Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="flat_number"
+                      placeholder="e.g. 101"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Flat Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="flat_type"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      defaultValue="2BHK"
+                      required
+                    >
+                      <option value="1RK">1 RK</option>
+                      <option value="1BHK">1 BHK</option>
+                      <option value="2BHK">2 BHK</option>
+                      <option value="3BHK">3 BHK</option>
+                      <option value="4BHK">4 BHK</option>
+                      <option value="4BHK+">4 BHK+</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Floor Number</label>
+                    <input
+                      type="text"
+                      name="floor_number"
+                      placeholder="e.g. 1"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Area (sqft)</label>
+                    <input
+                      type="number"
+                      name="area_sqft"
+                      placeholder="e.g. 735"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex space-x-4 pt-4">
+              {/* ── Occupancy Details ── */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 border-b pb-1">
+                  Occupancy Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      User Role <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="user_role"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      defaultValue="owner"
+                      required
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="renting_family">Renting – Family</option>
+                      <option value="renting_flatmates">Renting – Flatmates</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Occupancy Status
+                    </label>
+                    <select
+                      name="occupancy_status"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      defaultValue="residing"
+                    >
+                      <option value="residing">Residing</option>
+                      <option value="let_out">Let Out</option>
+                      <option value="empty">Empty</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Owner Details ── */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 border-b pb-1">
+                  Flat Owner Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Owner Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="owner_name"
+                      placeholder="Full name of the flat owner"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      name="owner_email"
+                      placeholder="owner@example.com"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="owner_phone"
+                      placeholder="10-digit phone number"
+                      pattern="[0-9]{10}"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      name="owner_password"
+                      placeholder="Set owner login password"
+                      minLength={6}
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    />
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Owner will be created as a <strong>resident</strong> user in the users table.
+                  All users table fields are captured; a default login & password will be provided.
+                </p>
+              </div>
+
+              <div className="flex space-x-4 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setShowAddFlatsModal(false)}
@@ -415,7 +569,7 @@ const BuildingManagement: React.FC = () => {
                   type="submit"
                   className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 >
-                  Add Flats
+                  Add Flat &amp; Owner
                 </button>
               </div>
             </form>

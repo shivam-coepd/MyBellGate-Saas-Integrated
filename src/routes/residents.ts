@@ -108,42 +108,47 @@ residents.get('/flats/all', (c) => {
   return c.json(result)
 })
 
-residents.post('/flats', async (c) => {
-  const body = await c.req.json()
-  const { flatNo, floor, block, area, type } = body
-  if (!flatNo || !block) return c.json({ error: 'Flat number and block are required' }, 400)
-  if (flats.find(f => f.flatNo === flatNo)) return c.json({ error: 'Flat number already exists' }, 409)
+  residents.post('/flats', async (c) => {
+    const body = await c.req.json()
+    const { flatNo, floor, block, area, type } = body
+    if (!flatNo || !block) return c.json({ error: 'Flat number and block are required' }, 400)
+    if (flats.find(f => f.flatNo === flatNo)) return c.json({ error: 'Flat number already exists' }, 409)
 
-  const newFlat: Flat = {
-    id: nextFlatId(),
-    flatNo,
-    floor: floor || 1,
-    block,
-    area: area || 0,
-    type: type || '2BHK',
-    status: 'vacant',
-    residents: [],
-    vehicles: [],
-    createdAt: new Date().toISOString()
-  }
-  flats.push(newFlat)
-  return c.json(newFlat, 201)
-})
+    const newFlat: Flat = {
+      id: nextFlatId(),
+      flatNo,
+      floor: floor || 1,
+      block,
+      area: area || 0,
+      type: type || '2BHK',
+      status: 'vacant',
+      ownerId: undefined,
+      tenantId: undefined,
+      residents: [],
+      vehicles: [],
+      createdAt: new Date().toISOString()
+    }
+    flats.push(newFlat)
+    return c.json(newFlat, 201)
+  })
 
-residents.put('/flats/:id', async (c) => {
-  const id = c.req.param('id')
-  const idx = flats.findIndex(f => f.id === id)
-  if (idx === -1) return c.json({ error: 'Flat not found' }, 404)
-  const body = await c.req.json()
-  const { flatNo, floor, block, area, type, vehicles } = body
-  if (flatNo) flats[idx].flatNo = flatNo
-  if (floor !== undefined) flats[idx].floor = floor
-  if (block) flats[idx].block = block
-  if (area !== undefined) flats[idx].area = area
-  if (type) flats[idx].type = type
-  if (vehicles) flats[idx].vehicles = vehicles
-  return c.json(flats[idx])
-})
+  residents.put('/flats/:id', async (c) => {
+    const id = c.req.param('id')
+    const idx = flats.findIndex(f => f.id === id)
+    if (idx === -1) return c.json({ error: 'Flat not found' }, 404)
+    const body = await c.req.json()
+    const { flatNo, floor, block, area, type, status, ownerId, tenantId, residents } = body
+    if (flatNo) flats[idx].flatNo = flatNo
+    if (floor !== undefined) flats[idx].floor = floor
+    if (block) flats[idx].block = block
+    if (area !== undefined) flats[idx].area = area
+    if (type) flats[idx].type = type
+    if (status) flats[idx].status = status
+    if (ownerId !== undefined) flats[idx].ownerId = ownerId
+    if (tenantId !== undefined) flats[idx].tenantId = tenantId
+    if (residents) flats[idx].residents = residents
+    return c.json(flats[idx])
+  })
 
 residents.delete('/flats/:id', (c) => {
   const id = c.req.param('id')

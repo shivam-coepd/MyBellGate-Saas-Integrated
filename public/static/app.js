@@ -1376,10 +1376,12 @@ async function renderResidents() {
       </div>
 
       ${getResidentModal(flats)}
-      ${getFlatModal()}`;
+      ${getFlatModal()}
+      ${getFlatDetailsModal()}`;
 
     setupModalClose("resident-modal");
     setupModalClose("flat-modal");
+    setupModalClose("flat-details-modal");
   } catch (err) {
     showError(err.message || "Failed to load residents");
   }
@@ -1391,7 +1393,7 @@ function renderFlatCards(flats) {
   return flats
     .map(
       (f) => `
-    <div class="flat-card">
+    <div class="flat-card" style="cursor:pointer" onclick="openFlatDetailsModal('${f.id}')">
       <div class="flat-card-top">
         <div>
           <div class="flat-number">${f.flatNo}</div>
@@ -1400,15 +1402,15 @@ function renderFlatCards(flats) {
         <span class="badge badge-${f.status}"><span class="badge-dot"></span>${f.status}</span>
       </div>
       <div class="flat-card-body">
-        <div class="flat-info-row"><i class="fa-solid fa-layer-group"></i> Floor ${f.floor} · ${f.area} sq ft</div>
-        ${f.owner ? `<div class="flat-info-row"><i class="fa-solid fa-user-tie"></i> ${f.owner.name} <span style="font-size:11px;color:var(--gray-400)">(Owner)</span></div>` : ""}
-        ${f.tenant ? `<div class="flat-info-row"><i class="fa-solid fa-user"></i> ${f.tenant.name} <span style="font-size:11px;color:var(--gray-400)">(Tenant)</span></div>` : ""}
+        <div class="flat-info-row"><i class="fa-solid fa-layer-group"></i> ${f.type} · Floor ${f.floor} · ${f.area} sq ft</div>
+        ${f.ownerDetails ? `<div class="flat-info-row"><i class="fa-solid fa-user-tie"></i> ${f.ownerDetails.name} <span style="font-size:11px;color:var(--gray-400)">(Owner)</span></div>` : ""}
+        ${f.tenantDetails ? `<div class="flat-info-row"><i class="fa-solid fa-user"></i> ${f.tenantDetails.name} <span style="font-size:11px;color:var(--gray-400)">(Tenant)</span></div>` : ""}
         ${f.status === "vacant" ? `<div class="flat-info-row" style="color:var(--orange-600)"><i class="fa-solid fa-circle-exclamation" style="color:var(--orange-500)"></i> Vacant</div>` : ""}
         ${f.vehicles && f.vehicles.length > 0 ? `<div class="flat-info-row"><i class="fa-solid fa-car"></i> ${f.vehicles.map((v) => v.number).join(", ")}</div>` : ""}
       </div>
       <div class="flat-card-footer">
-        <button class="btn btn-ghost btn-sm" onclick="editFlat('${f.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--red-500)" onclick="deleteFlat('${f.id}')"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editFlat('${f.id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red-500)" onclick="event.stopPropagation(); deleteFlat('${f.id}')"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>`,
     )
@@ -1434,7 +1436,7 @@ function renderResidentRows(residents, flats) {
           </div>
         </td>
         <td><div>${r.phone}</div><div class="text-xs text-muted">${r.email}</div></td>
-        <td>${flat ? `<span class="font-semibold">${flat.flatNo}</span><div class="text-xs text-muted">Block ${flat.block}</div>` : '<span class="text-muted">Unassigned</span>'}</td>
+        <td>${flat ? `<span class="font-semibold">${flat.flatNo}</span><div class="text-xs text-muted">${flat.type} · Block ${flat.block}</div>` : '<span class="text-muted">Unassigned</span>'}</td>
         <td><span class="badge ${isOwner ? "badge-approved" : "badge-in_progress"}">${isOwner ? "🏠 Owner" : "👤 Tenant"}</span></td>
         <td><span class="badge ${r.isActive ? "badge-approved" : "badge-rejected"}">${r.isActive ? "Active" : "Inactive"}</span></td>
         <td>
@@ -1468,9 +1470,15 @@ function getResidentModal(flats) {
               <input type="tel" class="form-input" id="r-phone" placeholder="10-digit mobile">
             </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Email Address <span class="required">*</span></label>
-            <input type="email" class="form-input" id="r-email" placeholder="resident@example.com">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Email Address <span class="required">*</span></label>
+              <input type="email" class="form-input" id="r-email" placeholder="resident@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password <span class="required">*</span></label>
+              <input type="text" class="form-input" id="r-password" placeholder="e.g. Pass@123" value="Pass@123">
+            </div>
           </div>
           <div class="grid-2">
             <div class="form-group">
@@ -1481,15 +1489,24 @@ function getResidentModal(flats) {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Resident Type</label>
+              <label class="form-label">Resident Role</label>
               <select class="form-input" id="r-type">
                 <option value="owner">Owner</option>
-                <option value="tenant">Tenant</option>
+                <option value="renting_family">Renting Family</option>
+                <option value="renting_flatmates">Renting Flatmates</option>
               </select>
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">Occupancy Status</label>
+            <select class="form-input" id="r-occupancy">
+              <option value="residing">Residing</option>
+              <option value="let_out">Let Out</option>
+              <option value="empty">Empty</option>
+            </select>
+          </div>
           <div class="form-group" style="background:var(--primary-50);border-radius:var(--radius-md);padding:12px 14px;margin-top:4px">
-            <p style="font-size:13px;color:var(--primary-700)"><i class="fa-solid fa-circle-info" style="margin-right:6px"></i>Default password will be <strong>resident123</strong>. Resident can change it after first login.</p>
+            <p style="font-size:13px;color:var(--primary-700)"><i class="fa-solid fa-circle-info" style="margin-right:6px"></i>A resident account will be created and the flat will be linked automatically based on the selected role.</p>
           </div>
         </div>
         <div class="modal-footer">
@@ -1523,7 +1540,7 @@ function getFlatModal() {
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label">Floor</label>
-              <input type="number" class="form-input" id="fl-floor" placeholder="1" min="0" max="50">
+              <input type="text" class="form-input" id="fl-floor" placeholder="e.g. 1">
             </div>
             <div class="form-group">
               <label class="form-label">Area (sq ft)</label>
@@ -1531,15 +1548,64 @@ function getFlatModal() {
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Flat Type</label>
+            <label class="form-label">Flat Type <span class="required">*</span></label>
             <select class="form-input" id="fl-type">
+              <option value="1RK">1 RK</option>
               <option value="1BHK">1 BHK</option>
               <option value="2BHK" selected>2 BHK</option>
               <option value="3BHK">3 BHK</option>
               <option value="4BHK">4 BHK</option>
-              <option value="Studio">Studio</option>
-              <option value="Penthouse">Penthouse</option>
+              <option value="4BHK+">4 BHK+</option>
             </select>
+          </div>
+
+          <hr style="margin:18px 0;border:none;border-top:1px solid var(--gray-200)">
+          <div class="form-group">
+            <label style="font-size:14px;font-weight:600;color:var(--gray-700);display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleOwnerFields()">
+              <i class="fa-solid fa-user-tie" style="color:var(--primary-500)"></i> Owner Details
+              <span style="font-size:11px;font-weight:400;color:var(--gray-400)">(optional — fill to auto-create resident &amp; mark flat occupied)</span>
+            </label>
+          </div>
+          <div id="owner-fields" style="display:none">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Owner Name</label>
+                <input type="text" class="form-input" id="fl-owner-name" placeholder="Full name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Owner Phone</label>
+                <input type="tel" class="form-input" id="fl-owner-phone" placeholder="10-digit mobile">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Owner Email</label>
+                <input type="email" class="form-input" id="fl-owner-email" placeholder="owner@example.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Owner Password</label>
+                <input type="text" class="form-input" id="fl-owner-password" placeholder="Pass@123">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Resident Role</label>
+                <select class="form-input" id="fl-user-role">
+                  <option value="owner">Owner</option>
+                  <option value="renting_family">Renting Family</option>
+                  <option value="renting_flatmates">Renting Flatmates</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Occupancy Status</label>
+                <select class="form-input" id="fl-occupancy-status">
+                  <option value="residing">Residing</option>
+                  <option value="let_out">Let Out</option>
+                  <option value="empty">Empty</option>
+                </select>
+              </div>
+            </div>
+            <p style="font-size:12px;color:var(--gray-500);margin-top:2px"><i class="fa-solid fa-circle-info"></i> If name, phone and email are provided, a resident account will be created automatically and the flat will be set to <strong>Occupied</strong>.</p>
           </div>
         </div>
         <div class="modal-footer">
@@ -1550,24 +1616,105 @@ function getFlatModal() {
     </div>`;
 }
 
+function getFlatDetailsModal() {
+  return `
+    <div class="modal-overlay" id="flat-details-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Flat Details</span>
+          <div class="modal-close" onclick="Modal.close('flat-details-modal')"><i class="fa-solid fa-times"></i></div>
+        </div>
+        <div class="modal-body" id="flat-details-content">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="Modal.close('flat-details-modal')">Close</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openFlatDetailsModal(id) {
+  const flat = State.data.flats.find((f) => f.id === id);
+  if (!flat) return;
+  const content = el("flat-details-content");
+  
+  let html = `
+    <div style="margin-bottom:20px;">
+      <h3 style="margin-bottom:8px;font-size:16px;">Flat Info</h3>
+      <p><strong>Flat:</strong> ${flat.flatNo} (Block ${flat.block})</p>
+      <p><strong>Type:</strong> ${flat.type}</p>
+      <p><strong>Floor:</strong> ${flat.floor}</p>
+      <p><strong>Area:</strong> ${flat.area} sq ft</p>
+      <p><strong>Status:</strong> ${flat.status}</p>
+    </div>
+  `;
+
+  if (flat.ownerDetails) {
+    html += `
+      <div style="margin-bottom:20px;padding:15px;background:var(--gray-50);border-radius:8px;">
+        <h3 style="margin-bottom:8px;font-size:15px;color:var(--primary-600)"><i class="fa-solid fa-user-tie"></i> Owner Details</h3>
+        <p><strong>Name:</strong> ${flat.ownerDetails.name || "N/A"}</p>
+        <p><strong>Phone:</strong> ${flat.ownerDetails.phone || "N/A"}</p>
+        <p><strong>Email:</strong> ${flat.ownerDetails.email || "N/A"}</p>
+      </div>
+    `;
+  } else {
+    html += `<div style="margin-bottom:20px;padding:15px;background:var(--gray-50);border-radius:8px;"><p style="color:var(--gray-500)">No owner assigned</p></div>`;
+  }
+
+  if (flat.tenantDetails) {
+    html += `
+      <div style="padding:15px;background:var(--gray-50);border-radius:8px;">
+        <h3 style="margin-bottom:8px;font-size:15px;color:var(--primary-600)"><i class="fa-solid fa-user"></i> Tenant Details</h3>
+        <p><strong>Name:</strong> ${flat.tenantDetails.name || "N/A"}</p>
+        <p><strong>Phone:</strong> ${flat.tenantDetails.phone || "N/A"}</p>
+        <p><strong>Email:</strong> ${flat.tenantDetails.email || "N/A"}</p>
+      </div>
+    `;
+  } else {
+    html += `<div style="padding:15px;background:var(--gray-50);border-radius:8px;"><p style="color:var(--gray-500)">No tenant assigned</p></div>`;
+  }
+  
+  content.innerHTML = html;
+  Modal.open("flat-details-modal");
+}
+
+function toggleOwnerFields() {
+  const el = document.getElementById('owner-fields');
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
 function openResidentModal(id) {
   el("r-id").value = id || "";
   el("r-name").value = "";
   el("r-phone").value = "";
   el("r-email").value = "";
+  el("r-password").value = "Pass@123";
   el("r-flat").value = "";
   el("r-type").value = "owner";
-  el("resident-modal-title").textContent = id
-    ? "Edit Resident"
-    : "Add Resident";
+  el("r-occupancy").value = "residing";
+  el("resident-modal-title").textContent = id ? "Edit Resident" : "Add Resident";
   if (id) {
     const r = State.data.residents.find((x) => x.id === id);
     if (r) {
       el("r-name").value = r.name;
       el("r-phone").value = r.phone;
-      el("r-email").value = r.email;
+      el("r-email").value = r.email || "";
       el("r-flat").value = r.flatId || "";
+      // Pre-fill role from linked flat data
+      const linkedFlat = State.data.flats.find((f) => f.id === r.flatId);
+      if (linkedFlat) {
+        el("r-type").value = linkedFlat.userRole || "owner";
+        el("r-occupancy").value = linkedFlat.occupancyStatus || "residing";
+      }
+      // Hide password field on edit (not required)
+      const pwdGroup = el("r-password")?.closest(".form-group");
+      if (pwdGroup) pwdGroup.style.display = "none";
     }
+  } else {
+    const pwdGroup = el("r-password")?.closest(".form-group");
+    if (pwdGroup) pwdGroup.style.display = "";
   }
   Modal.open("resident-modal");
 }
@@ -1576,9 +1723,16 @@ function openFlatModal(id) {
   el("fl-id").value = id || "";
   el("fl-no").value = "";
   el("fl-block").value = "";
-  el("fl-floor").value = "1";
+  el("fl-floor").value = "";
   el("fl-area").value = "";
   el("fl-type").value = "2BHK";
+  el("fl-owner-name").value = "";
+  el("fl-owner-phone").value = "";
+  el("fl-owner-email").value = "";
+  el("fl-owner-password").value = "";
+  el("fl-user-role").value = "owner";
+  el("fl-occupancy-status").value = "residing";
+  document.getElementById('owner-fields').style.display = 'none';
   el("flat-modal-title").textContent = id ? "Edit Flat" : "Add Flat";
   if (id) {
     const f = State.data.flats.find((x) => x.id === id);
@@ -1587,7 +1741,17 @@ function openFlatModal(id) {
       el("fl-block").value = f.block;
       el("fl-floor").value = f.floor;
       el("fl-area").value = f.area;
-      el("fl-type").value = f.type;
+      el("fl-type").value = f.type || "2BHK";
+      el("fl-user-role").value = f.userRole || "owner";
+      el("fl-occupancy-status").value = f.occupancyStatus || "residing";
+
+      const details = (f.userRole === "owner" || !f.userRole) ? f.ownerDetails : f.tenantDetails;
+      if (details) {
+        el("fl-owner-name").value = details.name || "";
+        el("fl-owner-phone").value = details.phone || "";
+        el("fl-owner-email").value = details.email || "";
+        document.getElementById('owner-fields').style.display = '';
+      }
     }
   }
   Modal.open("flat-modal");
@@ -1605,18 +1769,35 @@ async function submitResident() {
   const name = el("r-name").value.trim();
   const email = el("r-email").value.trim();
   const phone = el("r-phone").value.trim();
+  const password = el("r-password")?.value.trim() || "Pass@123";
   const flatId = el("r-flat").value;
-  const type = el("r-type").value;
-  if (!name || !email || !phone) {
-    Toast.error("Validation", "Name, email and phone are required");
+  const selectedRole = el("r-type").value;
+  const userRole = selectedRole; // keep original role (owner, renting_family, renting_flatmates)
+  const occupancyStatus = el("r-occupancy").value;
+
+  if (!name || !phone) {
+    Toast.error("Validation", "Name and phone are required");
     return;
   }
+  if (!id && !email) {
+    Toast.error("Validation", "Email is required when adding a new resident");
+    return;
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    Toast.error("Validation", "Please enter a valid email address");
+    return;
+  }
+  if (!id && !/^\d{10}$/.test(phone)) {
+    Toast.error("Validation", "Phone must be a 10-digit number");
+    return;
+  }
+
   try {
     if (id) {
-      await API.put(`/residents/${id}`, { name, email, phone });
+      await API.put(`/residents/${id}`, { name, email, flatId, userRole, occupancyStatus });
       Toast.success("Updated", "Resident updated successfully");
     } else {
-      await API.post("/residents", { name, email, phone, flatId, type });
+      await API.post("/residents", { name, email, phone, password, flatId, userRole, occupancyStatus });
       Toast.success("Added", "Resident added successfully");
     }
     Modal.close("resident-modal");
@@ -1630,27 +1811,66 @@ async function submitFlat() {
   const id = el("fl-id").value;
   const flatNo = el("fl-no").value.trim();
   const block = el("fl-block").value.trim();
-  const floor = parseInt(el("fl-floor").value) || 1;
+  const floor = el("fl-floor").value.trim() || "1";
   const area = parseInt(el("fl-area").value) || 0;
   const type = el("fl-type").value;
-  if (!flatNo || !block) {
-    Toast.error("Validation", "Flat number and block are required");
+
+  // Owner fields
+  const ownerName    = el("fl-owner-name").value.trim();
+  const ownerPhone   = el("fl-owner-phone").value.trim();
+  const ownerEmail   = el("fl-owner-email").value.trim();
+  const ownerPassword = el("fl-owner-password").value.trim();
+  const userRole     = el("fl-user-role").value;
+  const occupancyStatus = el("fl-occupancy-status").value;
+
+  const hasOwnerDetails = ownerName && ownerPhone && ownerEmail;
+
+  if (!flatNo || !block || !type) {
+    Toast.error("Validation", "Flat number, block and flat type are required");
     return;
   }
+  if (hasOwnerDetails && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) {
+    Toast.error("Validation", "Please enter a valid owner email address");
+    return;
+  }
+
   try {
+    let newFlat;
+    const body = { 
+        flatNo, block, floor: parseInt(floor), area, type, userRole, occupancyStatus
+    };
+    if (hasOwnerDetails) {
+        body.ownerName = ownerName;
+        body.ownerPhone = ownerPhone;
+        body.ownerEmail = ownerEmail;
+        body.ownerPassword = ownerPassword;
+    }
+
     if (id) {
-      await API.put(`/residents/flats/${id}`, {
-        flatNo,
-        block,
-        floor,
-        area,
-        type,
-      });
+      // ---- Edit existing flat ----
+      const existingFlat = State.data.flats.find(x => x.id === id);
+      if (existingFlat && hasOwnerDetails) {
+        const details = (existingFlat.userRole === "owner" || !existingFlat.userRole) ? existingFlat.ownerDetails : existingFlat.tenantDetails;
+        if (details && details.name === ownerName && details.phone === ownerPhone && details.email === ownerEmail) {
+          delete body.ownerName;
+          delete body.ownerPhone;
+          delete body.ownerEmail;
+          delete body.ownerPassword;
+        }
+      }
+      
+      const res = await API.put(`/residents/flats/${id}`, body);
+      newFlat = res;
       Toast.success("Updated", "Flat updated");
     } else {
-      await API.post("/residents/flats", { flatNo, block, floor, area, type });
+      // ---- Create new flat ----
+      newFlat = await API.post("/residents/flats", body);
       Toast.success("Added", `Flat ${flatNo} created`);
+      if (hasOwnerDetails) {
+          Toast.success("Resident Linked", `${ownerName} assigned to flat ${flatNo}`);
+      }
     }
+
     Modal.close("flat-modal");
     renderResidents();
   } catch (err) {
