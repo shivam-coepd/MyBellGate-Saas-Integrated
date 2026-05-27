@@ -13,6 +13,8 @@ const SocietyBridge = (() => {
     "/notices",
     "/billing",
     "/staff",
+    "/security",
+    "/amenities",
   ];
 
   /** UI complaint labels → API enum (general, maintenance, security, billing, other) */
@@ -115,6 +117,68 @@ const SocietyBridge = (() => {
     return [];
   }
 
+  function mapAlert(a) {
+    return {
+      id: String(a.id),
+      alertType: a.alert_type || "other",
+      description: a.description,
+      severity: a.severity || "medium",
+      status: a.status || "open",
+      location: a.location || null,
+      imageUrl: a.image_url || null,
+      reportedBy: a.reported_by_name || "Unknown",
+      resolvedBy: a.resolved_by_name || null,
+      resolvedAt: a.resolved_at || null,
+      createdAt: a.created_at,
+    };
+  }
+
+  function mapEmergencyContact(c) {
+    return {
+      id: String(c.id),
+      name: c.name,
+      phone: c.phone,
+      email: c.email || null,
+      contactType: c.contact_type || "other",
+      isActive: c.is_active == 1,
+      createdAt: c.created_at,
+    };
+  }
+
+  function mapAmenity(a) {
+    return {
+      id: String(a.id),
+      name: a.name,
+      description: a.description || "",
+      imageUrl: a.image_url || null,
+      capacity: parseInt(a.capacity, 10) || 1,
+      bookingFee: parseFloat(a.booking_fee) || 0,
+      cancellationFee: parseFloat(a.cancellation_fee) || 0,
+      cancellationPolicy: a.cancellation_policy || null,
+      isActive: a.is_active == 1,
+      totalBookings: parseInt(a.total_bookings, 10) || 0,
+      confirmedBookings: parseInt(a.confirmed_bookings, 10) || 0,
+      pendingBookings: parseInt(a.pending_bookings, 10) || 0,
+      createdAt: a.created_at,
+    };
+  }
+
+  function mapAmenityBooking(b) {
+    return {
+      id: String(b.id),
+      amenityId: String(b.amenity_id),
+      amenityName: b.amenity_name || "—",
+      residentId: b.resident_id ? String(b.resident_id) : null,
+      residentName: b.resident_name || "—",
+      bookingDate: b.booking_date,
+      startTime: b.start_time,
+      endTime: b.end_time,
+      status: b.status || "requested",
+      totalAmount: parseFloat(b.total_amount) || 0,
+      createdAt: b.created_at,
+    };
+  }
+
   function mapInvoiceStatus(status) {
     if (status === "paid" || status === "partially_paid") return "paid";
     if (status === "overdue") return "overdue";
@@ -201,6 +265,15 @@ const SocietyBridge = (() => {
     };
   }
 
+  const _invoiceGrandTotal = (i) => {
+    const amt  = parseFloat(i.total_amount    || 0);
+    const gst  = parseFloat(i.total_gst       || 0);
+    const arr  = parseFloat(i.arrears_amount  || 0);
+    const fine = parseFloat(i.fine_amount     || 0);
+    const disc = parseFloat(i.total_discount  || 0);
+    return amt + gst + arr + fine - disc;
+  };
+
   function mapInvoice(i) {
     const month = (i.invoice_date || "").slice(0, 7);
     return {
@@ -214,7 +287,7 @@ const SocietyBridge = (() => {
       waterCharges: 0,
       parkingCharges: 0,
       penalty: Number(i.fine_amount) || 0,
-      totalAmount: Number(i.total_amount) || 0,
+      totalAmount: _invoiceGrandTotal(i),
       status: mapInvoiceStatus(i.status),
       dueDate: i.due_date || i.invoice_date,
       paidDate: i.status === "paid" ? i.updated_at : null,
@@ -505,6 +578,26 @@ const SocietyBridge = (() => {
     return list.map((v) => mapVisitor(v, flatByResident));
   }
 
+  async function getSecurityAlerts() {
+    const list = unwrapList(await rawRequest("GET", "/security/alerts?limit=200"));
+    return list.map(mapAlert);
+  }
+
+  async function getEmergencyContactsList() {
+    const list = unwrapList(await rawRequest("GET", "/security/emergency-contacts?limit=100"));
+    return list.map(mapEmergencyContact);
+  }
+
+  async function getAmenitiesList() {
+    const list = unwrapList(await rawRequest("GET", "/amenities?limit=100"));
+    return list.map(mapAmenity);
+  }
+
+  async function getAmenityBookingsList() {
+    const list = unwrapList(await rawRequest("GET", "/amenities/bookings?limit=200"));
+    return list.map(mapAmenityBooking);
+  }
+
   async function getVisitorsToday() {
     const today = new Date().toISOString().slice(0, 10);
     const all = await getVisitors();
@@ -544,7 +637,7 @@ const SocietyBridge = (() => {
 
   async function getBills(residentId) {
     const invoices = unwrapList(
-      await rawRequest("GET", "/accounting/invoices?limit=500"),
+      await rawRequest("GET", "/accounting/invoices?limit=1000"),
     );
     let mapped = invoices.map(mapInvoice);
     if (residentId) {
@@ -554,21 +647,21 @@ const SocietyBridge = (() => {
   }
 
   async function getBillingStats() {
-    const fin = (await getCompleteSociety()).financial_summary || {};
     const invoices = unwrapList(
-      await rawRequest("GET", "/accounting/invoices?limit=500"),
+      await rawRequest("GET", "/accounting/invoices?limit=1000"),
     );
+    const paid = invoices.filter((i) => i.status === "paid");
+    const unpaid = invoices.filter(
+      (i) => i.status === "sent" || i.status === "draft" || i.status === "partially_paid"
+    );
+    const overdue = invoices.filter((i) => i.status === "overdue");
+
     return {
-      totalRevenue: parseFloat(fin.paid_revenue) || 0,
-      pendingRevenue: parseFloat(fin.pending_revenue) || 0,
-      paid: invoices.filter((i) => i.status === "paid").length,
-      unpaid: invoices.filter(
-        (i) =>
-          i.status === "sent" ||
-          i.status === "draft" ||
-          i.status === "partially_paid",
-      ).length,
-      overdue: invoices.filter((i) => i.status === "overdue").length,
+      totalRevenue: paid.reduce((s, i) => s + _invoiceGrandTotal(i), 0),
+      pendingRevenue: unpaid.reduce((s, i) => s + _invoiceGrandTotal(i), 0),
+      paid: paid.length,
+      unpaid: unpaid.length,
+      overdue: overdue.length,
       totalBills: invoices.length,
     };
   }
@@ -648,12 +741,32 @@ const SocietyBridge = (() => {
     if (method === "GET" && path === "/notices") {
       return getNotices();
     }
+    // Create a new notice (admin only)
+    if (method === "POST" && path === "/notices") {
+      return rawRequest("POST", "/communications/notices", body);
+    }
+    // Update an existing notice (admin only)
+    if (method === "PUT" && /^\/notices\/\d+$/.test(path)) {
+      const id = path.split("/")[2];
+      return rawRequest("PUT", `/communications/notices/${id}`, body);
+    }
+    // Delete a notice (admin only)
+    if (method === "DELETE" && /^\/notices\/\d+$/.test(path)) {
+      const id = path.split("/")[2];
+      return rawRequest("DELETE", `/communications/notices/${id}`);
+    }
+    // Existing billing endpoints
     if (method === "GET" && path === "/billing/stats") {
       return getBillingStats();
     }
     if (method === "GET" && path === "/billing") {
       const params = new URLSearchParams(query);
       return getBills(params.get("residentId"));
+    }
+    // Delete an invoice (admin only)
+    if (method === "DELETE" && /^\/billing\/\d+$/.test(path)) {
+      const id = path.split("/")[2];
+      return rawRequest("DELETE", `/accounting/invoices/${id}`);
     }
     if (method === "GET" && /^\/complaints\/\d+$/.test(path)) {
       return getComplaintDetail(path.split("/")[2]);
@@ -910,6 +1023,14 @@ const SocietyBridge = (() => {
       });
     }
 
+    if (method === "GET" && path === "/invoices") {
+      return rawRequest("GET", "/accounting/invoices");
+    }
+
+    if (method === "GET" && path === "/charge-heads") {
+      return rawRequest("GET", "/accounting/charge-heads");
+    }
+
     if (method === "DELETE" && /^\/notices\/\d+$/.test(path)) {
       throw new Error(
         "Published notices cannot be deleted from the portal. Edit content via a new notice if needed.",
@@ -919,6 +1040,8 @@ const SocietyBridge = (() => {
     if (method === "POST" && /^\/notices\/\d+\/acknowledge$/.test(path)) {
       return { ok: true };
     }
+
+
 
     if (method === "POST" && path === "/billing/generate") {
       const flats = await loadRawFlats();
@@ -1006,6 +1129,96 @@ const SocietyBridge = (() => {
       });
       invalidateCache();
       return payment;
+    }
+
+    // ── SECURITY ALERTS ─────────────────────────────────────────────────────
+    if (method === "GET" && path === "/security/alerts") {
+      return getSecurityAlerts();
+    }
+
+    if (method === "POST" && path === "/security/alerts") {
+      invalidateCache();
+      return rawRequest("POST", "/security/alerts", {
+        alert_type: body.alertType || body.alert_type || "other",
+        description: body.description,
+        severity: body.severity || "medium",
+        location: body.location || null,
+        image_url: body.imageUrl || body.image_url || null,
+      });
+    }
+
+    if (method === "PUT" && /^\/security\/alerts\/\d+\/status$/.test(path)) {
+      const id = path.split("/")[3];
+      invalidateCache();
+      return rawRequest("PUT", `/security/alerts/${id}/status`, {
+        status: body.status,
+      });
+    }
+
+    // ── EMERGENCY CONTACTS ───────────────────────────────────────────────────
+    if (method === "GET" && path === "/security/emergency-contacts") {
+      return getEmergencyContactsList();
+    }
+
+    if (method === "POST" && path === "/security/emergency-contacts") {
+      invalidateCache();
+      return rawRequest("POST", "/security/emergency-contacts", {
+        name: body.name,
+        phone: body.phone,
+        email: body.email || null,
+        contact_type: body.contactType || body.contact_type || "other",
+        is_active: 1,
+      });
+    }
+
+    // ── AMENITIES ────────────────────────────────────────────────────────────
+    if (method === "GET" && path === "/amenities") {
+      return getAmenitiesList();
+    }
+
+    if (method === "POST" && path === "/amenities") {
+      invalidateCache();
+      return rawRequest("POST", "/amenities", {
+        name: body.name,
+        description: body.description || null,
+        image_url: body.imageUrl || null,
+        capacity: parseInt(body.capacity, 10) || 1,
+        booking_fee: parseFloat(body.bookingFee || body.booking_fee) || 0,
+        cancellation_fee: parseFloat(body.cancellationFee || body.cancellation_fee) || 0,
+        cancellation_policy: body.cancellationPolicy || null,
+        is_active: 1,
+      });
+    }
+
+    if (method === "PUT" && /^\/amenities\/\d+$/.test(path)) {
+      const id = path.split("/")[2];
+      invalidateCache();
+      return rawRequest("PUT", `/amenities/${id}`, {
+        name: body.name,
+        description: body.description || null,
+        image_url: body.imageUrl || null,
+        capacity: parseInt(body.capacity, 10) || 1,
+        booking_fee: parseFloat(body.bookingFee || body.booking_fee) || 0,
+        is_active: body.isActive !== undefined ? (body.isActive ? 1 : 0) : 1,
+      });
+    }
+
+    if (method === "DELETE" && /^\/amenities\/\d+$/.test(path)) {
+      const id = path.split("/")[2];
+      invalidateCache();
+      return rawRequest("DELETE", `/amenities/${id}`);
+    }
+
+    if (method === "GET" && path === "/amenities/bookings") {
+      return getAmenityBookingsList();
+    }
+
+    if (method === "PUT" && /^\/amenities\/bookings\/\d+\/status$/.test(path)) {
+      const id = path.split("/")[3];
+      invalidateCache();
+      return rawRequest("PUT", `/amenities/bookings/${id}/status`, {
+        status: body.status,
+      });
     }
 
     throw new Error(`Society API mapping not implemented: ${method} ${endpoint}`);

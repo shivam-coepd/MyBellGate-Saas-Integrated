@@ -589,6 +589,12 @@ function getNavItems(role) {
       label: "Security Panel",
       roles: ["admin", "guard"],
     },
+    {
+      id: "amenities",
+      icon: "fa-dumbbell",
+      label: "Amenities",
+      roles: ["admin"],
+    },
   ];
   return all.filter((item) => item.roles.includes(role));
 }
@@ -618,6 +624,7 @@ function navigateTo(page) {
     notices: "Notice Board",
     billing: "Billing",
     security: "Security Panel",
+    amenities: "Amenities",
   };
   if (el("breadcrumb-current"))
     el("breadcrumb-current").textContent = labels[page] || page;
@@ -651,6 +658,9 @@ function navigateTo(page) {
         break;
       case "security":
         renderSecurity();
+        break;
+      case "amenities":
+        renderAmenities();
         break;
     }
   }, 150);
@@ -2387,11 +2397,10 @@ function renderNoticeCards(notices) {
         <span><i class="fa-solid fa-user"></i> ${n.authorName}</span>
         <span><i class="fa-solid fa-calendar"></i> ${formatDate(n.createdAt)}</span>
         <span><i class="fa-solid fa-check-double"></i> ${n.acknowledgedBy.length} acknowledged</span>
-        <span class="badge" style="background:var(--primary-50);color:var(--primary-600);margin-left:auto">${n.category}</span>
         ${
           State.user.role === "admin"
             ? `
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteNotice('${n.id}')" style="margin-left:8px;color:var(--red-500)"><i class="fa-solid fa-trash"></i></button>`
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteNotice('${n.id}')" style="margin-left:auto;color:var(--red-500)"><i class="fa-solid fa-trash"></i></button>`
             : ""
         }
       </div>
@@ -2461,13 +2470,13 @@ function openNoticeDetail(id) {
   el("ndm-body").innerHTML = `
     <div class="flex items-center gap-2 mb-4">
       <span class="badge badge-${n.priority}">${n.priority}</span>
-      <span class="badge" style="background:var(--primary-50);color:var(--primary-600)">${n.category}</span>
+      <span class="badge" style="background:var(--primary-50);color:var(--primary-600)">${n.category || "general"}</span>
       <span class="text-muted text-sm" style="margin-left:auto">${formatDate(n.createdAt)}</span>
     </div>
     <div style="background:var(--gray-50);border-radius:var(--radius-md);padding:20px;margin-bottom:16px;white-space:pre-line;line-height:1.8;font-size:14px;color:var(--gray-700)">${n.content}</div>
     <div class="flex items-center gap-3" style="padding:12px 0;border-top:1px solid var(--gray-100)">
-      <div class="user-avatar" style="width:32px;height:32px;font-size:12px">${initials(n.authorName)}</div>
-      <div><div class="font-semibold text-sm">${n.authorName}</div><div class="text-xs text-muted">Posted ${timeAgo(n.createdAt)}</div></div>
+      <div class="user-avatar" style="width:32px;height:32px;font-size:12px">${initials(n.createdBy || n.authorName || "Admin")}</div>
+      <div><div class="font-semibold text-sm">${n.createdBy || n.authorName || "Admin"}</div><div class="text-xs text-muted">Posted ${timeAgo(n.createdAt)}</div></div>
       <div style="margin-left:auto;text-align:right">
         <div class="text-sm font-semibold">${n.acknowledgedBy.length} residents</div>
         <div class="text-xs text-muted">acknowledged</div>
@@ -2510,6 +2519,7 @@ async function submitNotice() {
     Toast.error("Error", err.message);
   }
 }
+
 
 async function acknowledgeNotice(id) {
   try {
@@ -2799,20 +2809,20 @@ function filterBills() {
 // ============ SECURITY PANEL ============
 async function renderSecurity() {
   try {
-    const [visitors, flats] = await Promise.all([
+    const [visitors, flats, alerts, contacts] = await Promise.all([
       API.get("/visitors/today"),
       API.get("/residents/flats/all"),
+      API.get("/security/alerts").catch(() => []),
+      API.get("/security/emergency-contacts").catch(() => []),
     ]);
     State.data.visitors = visitors;
     State.data.flats = flats;
 
     const pending = visitors.filter((v) => v.status === "pending");
     const approved = visitors.filter(
-      (v) =>
-        v.status === "approved" ||
-        v.status === "entered" ||
-        v.status === "exited",
+      (v) => v.status === "approved" || v.status === "entered" || v.status === "exited",
     );
+    const openAlerts = alerts.filter((a) => a.status === "open" || a.status === "in_progress");
 
     const pc = el("page-content");
     pc.innerHTML = `
@@ -2828,90 +2838,224 @@ async function renderSecurity() {
           <div style="background:var(--green-100);color:var(--green-700);padding:8px 16px;border-radius:var(--radius-md);font-size:14px;font-weight:600">
             <i class="fa-solid fa-users"></i> ${visitors.length} Today
           </div>
+          ${openAlerts.length > 0 ? `<div style="background:var(--red-100);color:var(--red-700);padding:8px 16px;border-radius:var(--radius-md);font-size:14px;font-weight:600">
+            <i class="fa-solid fa-triangle-exclamation"></i> ${openAlerts.length} Alert${openAlerts.length !== 1 ? "s" : ""}
+          </div>` : ""}
         </div>
       </div>
 
-      <div class="guard-panel">
-        <div class="guard-panel-left">
-          <div class="card">
-            <div class="card-header"><span class="card-title"><i class="fa-solid fa-user-plus" style="color:var(--primary-500)"></i> Log Visitor</span></div>
-            <div class="card-body">
-              <div class="form-group">
-                <label class="form-label">Visitor Name <span class="required">*</span></label>
-                <input type="text" class="form-input" id="sg-name" placeholder="Full name">
+      <!-- Tabs for Security Panel -->
+      <div class="tabs" style="margin-bottom:20px" id="security-tabs">
+        <div class="tab active" id="sec-tab-gate" onclick="switchSecurityTab('gate')">Gate Management</div>
+        <div class="tab" id="sec-tab-alerts" onclick="switchSecurityTab('alerts')">
+          Security Alerts ${openAlerts.length > 0 ? `<span style="background:var(--red-500);color:white;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-left:4px">${openAlerts.length}</span>` : ""}
+        </div>
+        <div class="tab" id="sec-tab-contacts" onclick="switchSecurityTab('contacts')">Emergency Contacts</div>
+      </div>
+
+      <!-- TAB: Gate Management -->
+      <div id="sec-content-gate" class="page-transition">
+        <div class="guard-panel">
+          <div class="guard-panel-left">
+            <div class="card">
+              <div class="card-header"><span class="card-title"><i class="fa-solid fa-user-plus" style="color:var(--primary-500)"></i> Log Visitor</span></div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label">Visitor Name <span class="required">*</span></label>
+                  <input type="text" class="form-input" id="sg-name" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone <span class="required">*</span></label>
+                  <input type="tel" class="form-input" id="sg-phone" placeholder="10-digit mobile">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Visiting Flat <span class="required">*</span></label>
+                  <select class="form-input" id="sg-flat">
+                    <option value="">Select flat...</option>
+                    ${flats
+                      .filter((f) => f.status === "occupied")
+                      .map((f) => `<option value="${f.id}">${f.flatNo} — ${f.owner ? f.owner.name : "Resident"}</option>`)
+                      .join("")}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Purpose <span class="required">*</span></label>
+                  <select class="form-input" id="sg-purpose">
+                    <option value="">Select purpose</option>
+                    <option>Personal Visit</option><option>Delivery</option><option>Courier</option>
+                    <option>Maid</option><option>Plumber</option><option>Electrician</option>
+                    <option>Cook</option><option>Driver</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Vehicle No. <span style="color:var(--gray-400);font-weight:400">(if any)</span></label>
+                  <input type="text" class="form-input" id="sg-vehicle" placeholder="MH12AB1234">
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-warning flex-1" onclick="logVisitorSecurity(false)"><i class="fa-solid fa-bell"></i> Request Approval</button>
+                  <button class="btn btn-success flex-1" onclick="logVisitorSecurity(true)"><i class="fa-solid fa-door-open"></i> Direct Entry</button>
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Phone <span class="required">*</span></label>
-                <input type="tel" class="form-input" id="sg-phone" placeholder="10-digit mobile">
+            </div>
+          </div>
+
+          <div>
+            ${
+              pending.length > 0
+                ? `
+              <div class="card" style="margin-bottom:16px;border:2px solid var(--orange-300)">
+                <div class="card-header" style="background:var(--orange-50)">
+                  <span class="card-title" style="color:var(--orange-700)"><i class="fa-solid fa-clock-rotate-left"></i> Awaiting Approval (${pending.length})</span>
+                </div>
+                <div class="card-body" style="padding:12px;display:flex;flex-direction:column;gap:10px">
+                  ${pending.map((v) => renderSecurityVisitorCard(v, true)).join("")}
+                </div>
+              </div>`
+                : ""
+            }
+
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title"><i class="fa-solid fa-list-check" style="color:var(--primary-500)"></i> Today's Log</span>
+                <button class="btn btn-ghost btn-sm" onclick="renderSecurity()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
               </div>
-              <div class="form-group">
-                <label class="form-label">Visiting Flat <span class="required">*</span></label>
-                <select class="form-input" id="sg-flat">
-                  <option value="">Select flat...</option>
-                  ${flats
-                    .filter((f) => f.status === "occupied")
-                    .map(
-                      (f) =>
-                        `<option value="${f.id}">${f.flatNo} — ${f.owner ? f.owner.name : "Resident"}</option>`,
-                    )
-                    .join("")}
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Purpose <span class="required">*</span></label>
-                <select class="form-input" id="sg-purpose">
-                  <option value="">Select purpose</option>
-                  <option>Personal Visit</option><option>Delivery</option><option>Courier</option>
-                  <option>Maid</option><option>Plumber</option><option>Electrician</option>
-                  <option>Cook</option><option>Driver</option><option>Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Vehicle No. <span style="color:var(--gray-400);font-weight:400">(if any)</span></label>
-                <input type="text" class="form-input" id="sg-vehicle" placeholder="MH12AB1234">
-              </div>
-              <div style="display:flex;gap:8px">
-                <button class="btn btn-warning flex-1" onclick="logVisitorSecurity(false)"><i class="fa-solid fa-bell"></i> Request Approval</button>
-                <button class="btn btn-success flex-1" onclick="logVisitorSecurity(true)"><i class="fa-solid fa-door-open"></i> Direct Entry</button>
+              <div class="card-body" style="padding:12px">
+                <div class="visitor-live-list">
+                  ${
+                    approved.length === 0
+                      ? '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:36px">👮</div><p class="text-muted text-sm">No visitors logged today</p></div>'
+                      : approved.map((v) => renderSecurityVisitorCard(v, false)).join("")
+                  }
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div>
-          ${
-            pending.length > 0
-              ? `
-            <div class="card" style="margin-bottom:16px;border:2px solid var(--orange-300)">
-              <div class="card-header" style="background:var(--orange-50)">
-                <span class="card-title" style="color:var(--orange-700)"><i class="fa-solid fa-clock-rotate-left"></i> Awaiting Approval (${pending.length})</span>
-              </div>
-              <div class="card-body" style="padding:12px;display:flex;flex-direction:column;gap:10px">
-                ${pending.map((v) => renderSecurityVisitorCard(v, true)).join("")}
-              </div>
-            </div>`
-              : ""
-          }
+      <!-- TAB: Security Alerts -->
+      <div id="sec-content-alerts" class="hidden page-transition">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div></div>
+          ${State.user.role === "admin" || State.user.role === "guard" ? `<button class="btn btn-danger btn-sm" onclick="openReportAlertModal()"><i class="fa-solid fa-triangle-exclamation"></i> Report Alert</button>` : ""}
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red-500)"></i> Security Alerts</span>
+            <span class="text-muted text-sm">${alerts.length} total</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead><tr><th>Type</th><th>Description</th><th>Severity</th><th>Status</th><th>Reported By</th><th>Time</th><th>Actions</th></tr></thead>
+              <tbody id="alerts-tbody">
+                ${renderAlertRows(alerts)}
+              </tbody>
+            </table>
+          </div>
+          ${alerts.length === 0 ? emptyState("fa-shield-check", "No security alerts", "All clear! No alerts have been reported.") : ""}
+        </div>
 
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title"><i class="fa-solid fa-list-check" style="color:var(--primary-500)"></i> Today's Log</span>
-              <button class="btn btn-ghost btn-sm" onclick="renderSecurity()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <!-- Report Alert Modal -->
+        <div class="modal-overlay" id="report-alert-modal">
+          <div class="modal modal-sm">
+            <div class="modal-header">
+              <span class="modal-title">Report Security Alert</span>
+              <div class="modal-close" onclick="Modal.close('report-alert-modal')"><i class="fa-solid fa-times"></i></div>
             </div>
-            <div class="card-body" style="padding:12px">
-              <div class="visitor-live-list">
-                ${
-                  approved.length === 0
-                    ? '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:36px">👮</div><p class="text-muted text-sm">No visitors logged today</p></div>'
-                    : approved
-                        .map((v) => renderSecurityVisitorCard(v, false))
-                        .join("")
-                }
+            <div class="modal-body">
+              <div class="form-group">
+                <label class="form-label">Alert Type <span class="required">*</span></label>
+                <select class="form-input" id="ra-type">
+                  <option value="suspicious_activity">Suspicious Activity</option>
+                  <option value="unauthorized_access">Unauthorized Access</option>
+                  <option value="emergency">Emergency</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
+              <div class="form-group">
+                <label class="form-label">Severity</label>
+                <select class="form-input" id="ra-severity">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Location <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+                <input type="text" class="form-input" id="ra-location" placeholder="e.g. Gate 2, Parking Lot B">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Description <span class="required">*</span></label>
+                <textarea class="form-input" id="ra-description" rows="4" placeholder="Describe the security incident..."></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-ghost" onclick="Modal.close('report-alert-modal')">Cancel</button>
+              <button class="btn btn-danger" onclick="submitSecurityAlert()"><i class="fa-solid fa-triangle-exclamation"></i> Report Alert</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Emergency Contacts -->
+      <div id="sec-content-contacts" class="hidden page-transition">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div></div>
+          ${State.user.role === "admin" ? `<button class="btn btn-primary btn-sm" onclick="openAddContactModal()"><i class="fa-solid fa-plus"></i> Add Contact</button>` : ""}
+        </div>
+        <div class="grid-3" id="emergency-contacts-grid">
+          ${renderEmergencyContactCards(contacts)}
+        </div>
+        ${contacts.length === 0 ? emptyState("fa-phone-volume", "No emergency contacts", "Add emergency contacts like police, fire, hospital for quick access.") : ""}
+
+        <!-- Add Emergency Contact Modal -->
+        <div class="modal-overlay" id="add-contact-modal">
+          <div class="modal modal-sm">
+            <div class="modal-header">
+              <span class="modal-title">Add Emergency Contact</span>
+              <div class="modal-close" onclick="Modal.close('add-contact-modal')"><i class="fa-solid fa-times"></i></div>
+            </div>
+            <div class="modal-body">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label">Contact Name <span class="required">*</span></label>
+                  <input type="text" class="form-input" id="ec-name" placeholder="e.g. Police Station">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Type <span class="required">*</span></label>
+                  <select class="form-input" id="ec-type">
+                    <option value="police">🚔 Police</option>
+                    <option value="fire">🚒 Fire</option>
+                    <option value="ambulance">🚑 Ambulance</option>
+                    <option value="hospital">🏥 Hospital</option>
+                    <option value="other">📞 Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label">Phone <span class="required">*</span></label>
+                  <input type="tel" class="form-input" id="ec-phone" placeholder="10-digit number">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+                  <input type="email" class="form-input" id="ec-email" placeholder="contact@example.com">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-ghost" onclick="Modal.close('add-contact-modal')">Cancel</button>
+              <button class="btn btn-primary" onclick="submitEmergencyContact()"><i class="fa-solid fa-check"></i> Save Contact</button>
             </div>
           </div>
         </div>
       </div>`;
+
+    setupModalClose("report-alert-modal");
+    setupModalClose("add-contact-modal");
+    window._secAlerts = alerts;
+    window._secContacts = contacts;
   } catch (err) {
     showError(err.message || "Failed to load security panel");
   }
@@ -3002,6 +3146,391 @@ async function exitVisitorSec(id) {
     await API.put(`/visitors/${id}/exit`, {});
     Toast.info("Exit Logged", "Visitor exit recorded");
     renderSecurity();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+function switchSecurityTab(tab) {
+  document.querySelectorAll("#security-tabs .tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("sec-tab-" + tab).classList.add("active");
+  document.getElementById("sec-content-gate").classList.add("hidden");
+  document.getElementById("sec-content-alerts").classList.add("hidden");
+  document.getElementById("sec-content-contacts").classList.add("hidden");
+  document.getElementById("sec-content-" + tab).classList.remove("hidden");
+}
+
+function renderAlertRows(alerts) {
+  return alerts.map(a => `
+    <tr>
+      <td><span class="badge" style="background:var(--red-50);color:var(--red-700)">${a.alertType.replace("_", " ")}</span></td>
+      <td style="max-width:250px" class="truncate">${a.description}</td>
+      <td><span class="badge badge-${a.severity}">${a.severity}</span></td>
+      <td><span class="badge badge-${a.status === 'open' ? 'pending' : (a.status === 'resolved' ? 'approved' : a.status)}">${a.status.replace("_", " ")}</span></td>
+      <td>${a.reportedBy}</td>
+      <td>${formatDateTime(a.createdAt)}</td>
+      <td>
+        ${a.status !== 'resolved' && a.status !== 'closed' && (State.user.role === 'admin' || State.user.role === 'guard') ? `
+        <select class="form-input" style="padding:2px 8px;font-size:12px;height:auto;width:auto" onchange="updateAlertStatus('${a.id}', this.value)">
+          <option value="" disabled selected>Update...</option>
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>` : a.resolvedBy ? `<span class="text-xs text-muted">by ${a.resolvedBy}</span>` : ""}
+      </td>
+    </tr>
+  `).join("");
+}
+
+function openReportAlertModal() {
+  Modal.open('report-alert-modal');
+}
+
+async function submitSecurityAlert() {
+  const alertType = el("ra-type").value;
+  const severity = el("ra-severity").value;
+  const location = el("ra-location").value.trim();
+  const description = el("ra-description").value.trim();
+  
+  if (!description) {
+    Toast.error("Validation", "Description is required");
+    return;
+  }
+  
+  try {
+    await API.post("/security/alerts", { alertType, severity, location, description });
+    Toast.success("Alert Reported", "Security team has been notified");
+    Modal.close('report-alert-modal');
+    renderSecurity();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+async function updateAlertStatus(id, status) {
+  try {
+    await API.put(`/security/alerts/${id}/status`, { status });
+    Toast.success("Status Updated", `Alert marked as ${status.replace("_", " ")}`);
+    renderSecurity();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+function renderEmergencyContactCards(contacts) {
+  return contacts.map(c => `
+    <div class="card" style="padding:16px;display:flex;align-items:center;gap:12px">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--blue-50);color:var(--blue-600);display:flex;align-items:center;justify-content:center;font-size:20px">
+        <i class="fa-solid fa-${c.contactType === 'police' ? 'shield-halved' : c.contactType === 'fire' ? 'fire-extinguisher' : c.contactType === 'ambulance' ? 'truck-medical' : c.contactType === 'hospital' ? 'hospital' : 'phone'}"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:600;color:var(--gray-800)">${c.name}</div>
+        <div style="font-size:12px;color:var(--gray-500);text-transform:capitalize">${c.contactType}</div>
+      </div>
+      <a href="tel:${c.phone}" class="btn btn-primary" style="padding:8px 12px;border-radius:50%"><i class="fa-solid fa-phone"></i></a>
+    </div>
+  `).join("");
+}
+
+function openAddContactModal() {
+  Modal.open('add-contact-modal');
+}
+
+async function submitEmergencyContact() {
+  const name = el("ec-name").value.trim();
+  const contactType = el("ec-type").value;
+  const phone = el("ec-phone").value.trim();
+  const email = el("ec-email").value.trim();
+  
+  if (!name || !phone) {
+    Toast.error("Validation", "Name and phone are required");
+    return;
+  }
+  
+  try {
+    await API.post("/security/emergency-contacts", { name, contactType, phone, email });
+    Toast.success("Contact Added", "Emergency contact saved");
+    Modal.close('add-contact-modal');
+    renderSecurity();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+// ============ AMENITIES ============
+async function renderAmenities() {
+  try {
+    const [amenities, bookings] = await Promise.all([
+      API.get("/amenities").catch(() => []),
+      API.get("/amenities/bookings").catch(() => []),
+    ]);
+    State.data.amenities = amenities;
+    State.data.amenityBookings = bookings;
+
+    const pc = el("page-content");
+    pc.innerHTML = `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 class="page-title"><i class="fa-solid fa-dumbbell" style="color:var(--primary-500)"></i> Amenities Management</h1>
+          <p class="page-subtitle">Manage society facilities and bookings</p>
+        </div>
+        ${State.user.role === "admin" ? `<button class="btn btn-primary btn-sm" onclick="Modal.open('add-amenity-modal')"><i class="fa-solid fa-plus"></i> Add Amenity</button>` : ""}
+      </div>
+
+      <div class="tabs" style="margin-bottom:20px" id="amenity-tabs">
+        <div class="tab active" id="am-tab-facilities" onclick="switchAmenityTab('facilities')">Facilities</div>
+        <div class="tab" id="am-tab-bookings" onclick="switchAmenityTab('bookings')">Bookings</div>
+      </div>
+
+      <div id="am-content-facilities" class="page-transition">
+        <div class="grid-3">
+          ${amenities.length === 0 ? emptyState("fa-swimming-pool", "No amenities added", "Add clubhouses, swimming pools, courts, etc.") : amenities.map(renderAmenityCard).join("")}
+        </div>
+      </div>
+
+      <div id="am-content-bookings" class="hidden page-transition">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Booking Requests</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead><tr><th>Resident</th><th>Amenity</th><th>Date & Time</th><th>Status</th><th>Fee</th><th>Actions</th></tr></thead>
+              <tbody>
+                ${bookings.length === 0 ? `<tr><td colspan="6" class="text-center text-muted" style="padding:24px">No bookings found</td></tr>` : bookings.map(renderBookingRow).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      ${State.user.role === "admin" ? getAddAmenityModal() : ""}
+      ${State.user.role === "admin" ? getEditAmenityModal() : ""}
+    `;
+    setupModalClose("add-amenity-modal");
+    setupModalClose("edit-amenity-modal");
+  } catch (err) {
+    showError(err.message || "Failed to load amenities");
+  }
+}
+
+function switchAmenityTab(tab) {
+  document.querySelectorAll("#amenity-tabs .tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("am-tab-" + tab).classList.add("active");
+  document.getElementById("am-content-facilities").classList.add("hidden");
+  document.getElementById("am-content-bookings").classList.add("hidden");
+  document.getElementById("am-content-" + tab).classList.remove("hidden");
+}
+
+function renderAmenityCard(a) {
+  return `
+    <div class="card" style="display:flex;flex-direction:column;height:100%;position:relative">
+      ${State.user.role === 'admin' ? `
+      <div style="position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:10">
+        <button class="btn btn-sm btn-ghost" style="background:rgba(255,255,255,0.9);box-shadow:0 2px 4px rgba(0,0,0,0.1)" onclick="openEditAmenityModal('${a.id}')"><i class="fa-solid fa-pen text-primary"></i></button>
+        <button class="btn btn-sm btn-ghost" style="background:rgba(255,255,255,0.9);box-shadow:0 2px 4px rgba(0,0,0,0.1)" onclick="deleteAmenity('${a.id}')"><i class="fa-solid fa-trash text-danger"></i></button>
+      </div>` : ""}
+      ${a.imageUrl ? `<div style="height:140px;background:url('${a.imageUrl}') center/cover;border-radius:var(--radius-lg) var(--radius-lg) 0 0"></div>` : `<div style="height:140px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:32px;border-radius:var(--radius-lg) var(--radius-lg) 0 0"><i class="fa-solid fa-image"></i></div>`}
+      <div style="padding:16px;flex:1;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <h3 style="margin:0;font-size:16px;font-weight:600;padding-right:${State.user.role==='admin'?'0':'0'}">${a.name}</h3>
+          <span class="badge badge-${a.isActive ? 'approved' : 'suspended'}">${a.isActive ? 'Active' : 'Inactive'}</span>
+        </div>
+        <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${a.description || "No description provided."}</p>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span class="text-muted"><i class="fa-solid fa-users"></i> Capacity</span> <span>${a.capacity} pax</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span class="text-muted"><i class="fa-solid fa-indian-rupee-sign"></i> Booking Fee</span> <span>${a.bookingFee > 0 ? formatCurrency(a.bookingFee) : "Free"}</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderBookingRow(b) {
+  return `
+    <tr>
+      <td><div class="font-semibold">${b.residentName}</div></td>
+      <td>${b.amenityName}</td>
+      <td>
+        <div class="font-medium">${formatDate(b.bookingDate)}</div>
+        <div class="text-xs text-muted">${b.startTime} - ${b.endTime}</div>
+      </td>
+      <td><span class="badge badge-${b.status === 'confirmed' ? 'approved' : b.status === 'requested' ? 'pending' : b.status === 'cancelled' ? 'suspended' : b.status === 'already_booked' ? 'warning' : 'neutral'}">${b.status.replace("_", " ")}</span></td>
+      <td>${b.totalAmount > 0 ? formatCurrency(b.totalAmount) : "Free"}</td>
+      <td>
+        ${b.status === 'requested' && State.user.role === 'admin' ? `
+          <button class="btn btn-sm btn-success" title="Approve" onclick="updateBookingStatus('${b.id}', 'confirmed')"><i class="fa-solid fa-check"></i></button>
+          <button class="btn btn-sm" style="background:var(--orange-500);color:white;border-color:var(--orange-600)" title="Already Booked" onclick="updateBookingStatus('${b.id}', 'already_booked')"><i class="fa-solid fa-ban"></i></button>
+          <button class="btn btn-sm btn-danger" title="Cancel" onclick="updateBookingStatus('${b.id}', 'cancelled')"><i class="fa-solid fa-xmark"></i></button>
+        ` : ""}
+      </td>
+    </tr>
+  `;
+}
+
+function getAddAmenityModal() {
+  return `
+    <div class="modal-overlay" id="add-amenity-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Add New Amenity</span>
+          <div class="modal-close" onclick="Modal.close('add-amenity-modal')"><i class="fa-solid fa-times"></i></div>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="am-name" placeholder="e.g. Swimming Pool">
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Capacity (persons)</label>
+              <input type="number" class="form-input" id="am-cap" value="10" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Booking Fee (₹)</label>
+              <input type="number" class="form-input" id="am-fee" value="0" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Image URL <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+            <input type="url" class="form-input" id="am-img" placeholder="https://example.com/image.jpg">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-input" id="am-desc" rows="3" placeholder="Rules, timings, etc."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="Modal.close('add-amenity-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="submitAmenity()"><i class="fa-solid fa-plus"></i> Add Amenity</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function submitAmenity() {
+  const name = el("am-name").value.trim();
+  const capacity = el("am-cap").value;
+  const bookingFee = el("am-fee").value;
+  const imageUrl = el("am-img").value.trim();
+  const description = el("am-desc").value.trim();
+
+  if (!name) {
+    Toast.error("Validation", "Name is required");
+    return;
+  }
+
+  try {
+    await API.post("/amenities", { name, capacity, bookingFee, imageUrl, description });
+    Toast.success("Added", "Amenity added successfully");
+    Modal.close('add-amenity-modal');
+    renderAmenities();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+function getEditAmenityModal() {
+  return `
+    <div class="modal-overlay" id="edit-amenity-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Edit Amenity</span>
+          <div class="modal-close" onclick="Modal.close('edit-amenity-modal')"><i class="fa-solid fa-times"></i></div>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-am-id">
+          <div class="form-group">
+            <label class="form-label">Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="edit-am-name">
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Capacity (persons)</label>
+              <input type="number" class="form-input" id="edit-am-cap" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Booking Fee (₹)</label>
+              <input type="number" class="form-input" id="edit-am-fee" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Image URL <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+            <input type="url" class="form-input" id="edit-am-img">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-input" id="edit-am-desc" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="edit-am-active"> Is Active (Available for booking)
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="Modal.close('edit-amenity-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="submitEditAmenity()"><i class="fa-solid fa-check"></i> Save Changes</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openEditAmenityModal(id) {
+  const amenity = State.data.amenities.find(a => a.id === id);
+  if (!amenity) return;
+  
+  el("edit-am-id").value = amenity.id;
+  el("edit-am-name").value = amenity.name;
+  el("edit-am-cap").value = amenity.capacity;
+  el("edit-am-fee").value = amenity.bookingFee;
+  el("edit-am-img").value = amenity.imageUrl || "";
+  el("edit-am-desc").value = amenity.description || "";
+  el("edit-am-active").checked = amenity.isActive;
+  
+  Modal.open('edit-amenity-modal');
+}
+
+async function submitEditAmenity() {
+  const id = el("edit-am-id").value;
+  const name = el("edit-am-name").value.trim();
+  const capacity = el("edit-am-cap").value;
+  const bookingFee = el("edit-am-fee").value;
+  const imageUrl = el("edit-am-img").value.trim();
+  const description = el("edit-am-desc").value.trim();
+  const isActive = el("edit-am-active").checked;
+
+  if (!name) {
+    Toast.error("Validation", "Name is required");
+    return;
+  }
+
+  try {
+    await API.put(`/amenities/${id}`, { name, capacity, bookingFee, imageUrl, description, isActive });
+    Toast.success("Updated", "Amenity updated successfully");
+    Modal.close('edit-amenity-modal');
+    renderAmenities();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+async function deleteAmenity(id) {
+  if (!confirm("Are you sure you want to delete this amenity? This action cannot be undone.")) return;
+  
+  try {
+    await API.delete(`/amenities/${id}`);
+    Toast.success("Deleted", "Amenity deleted successfully");
+    renderAmenities();
+  } catch (err) {
+    Toast.error("Error", err.message);
+  }
+}
+
+async function updateBookingStatus(id, status) {
+  try {
+    await API.put(`/amenities/bookings/${id}/status`, { status });
+    Toast.success("Updated", `Booking ${status}`);
+    renderAmenities();
   } catch (err) {
     Toast.error("Error", err.message);
   }
