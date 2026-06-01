@@ -107,12 +107,12 @@ const Footer: React.FC = () => {
               </Link>
             </li>
             <li>
-              <a
+              <Link
                 className="text-slate-500 hover:text-secondary hover:underline decoration-2 underline-offset-4"
-                href="#"
+                to="/privacy-policy"
               >
                 Privacy Policy
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
@@ -156,9 +156,9 @@ const Footer: React.FC = () => {
           <a className="hover:text-primary" href="#">
             Terms
           </a>
-          <a className="hover:text-primary" href="#">
+          <Link className="hover:text-primary" to="/privacy-policy">
             Privacy
-          </a>
+          </Link>
           <a className="hover:text-primary" href="#">
             Cookies
           </a>

@@ -9,6 +9,7 @@ import Security from './pages/Security';
 import Pricing from './pages/Pricing';
 import About from './pages/About';
 import Login from './pages/Login';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SocietyAdminDashboard from './pages/SocietyAdminDashboard';
 import UserManagement from './pages/UserManagement';
@@ -31,6 +32,7 @@ function App() {
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               
               {/* Admin Routes */}
               <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
