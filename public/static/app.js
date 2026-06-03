@@ -595,6 +595,12 @@ function getNavItems(role) {
       label: "Amenities",
       roles: ["admin"],
     },
+    {
+      id: "guards",
+      icon: "fa-shield-halved",
+      label: "Guards",
+      roles: ["admin"],
+    },
   ];
   return all.filter((item) => item.roles.includes(role));
 }
@@ -625,6 +631,7 @@ function navigateTo(page) {
     billing: "Billing",
     security: "Security Panel",
     amenities: "Amenities",
+    guards: "Guard Management",
   };
   if (el("breadcrumb-current"))
     el("breadcrumb-current").textContent = labels[page] || page;
@@ -661,6 +668,9 @@ function navigateTo(page) {
         break;
       case "amenities":
         renderAmenities();
+        break;
+      case "guards":
+        renderGuards();
         break;
     }
   }, 150);
@@ -5006,3 +5016,607 @@ document.addEventListener("keydown", (e) => {
 
 // Start app
 init();
+
+
+// ============ GUARD MANAGEMENT ============
+
+// State for guard management
+const GuardMgmt = {
+  guards: [],
+  attendance: [],
+  attendanceSummary: null,
+  total: 0,
+  page: 1,
+  search: '',
+  statusFilter: '',
+  activeTab: 'guards',
+  attPage: 1,
+  attGuardId: '',
+  attDateFrom: '',
+  attDateTo: '',
+  attStatus: '',
+  attTotal: 0,
+};
+
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+function getFirstOfMonth() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+}
+
+async function renderGuards() {
+  GuardMgmt.activeTab = GuardMgmt.activeTab || 'guards';
+  if (!GuardMgmt.attDateFrom) GuardMgmt.attDateFrom = getFirstOfMonth();
+  if (!GuardMgmt.attDateTo)   GuardMgmt.attDateTo   = getToday();
+
+  const pc = el('page-content');
+  pc.innerHTML = `
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-title">Guard Management</h1>
+        <p class="page-subtitle">Manage security guards and view attendance records</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAddGuardModal()">
+          <i class="fa-solid fa-plus"></i> Add Guard
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <div style="display:flex;border-bottom:1px solid var(--gray-200);padding:0 20px">
+        <button id="tab-guards" onclick="switchGuardTab('guards')"
+          style="padding:14px 20px;background:none;border:none;border-bottom:2px solid ${GuardMgmt.activeTab==='guards'?'var(--primary-500)':'transparent'};
+          color:${GuardMgmt.activeTab==='guards'?'var(--primary-600)':'var(--gray-500)'};font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <i class="fa-solid fa-users"></i> Guards
+        </button>
+        <button id="tab-attendance" onclick="switchGuardTab('attendance')"
+          style="padding:14px 20px;background:none;border:none;border-bottom:2px solid ${GuardMgmt.activeTab==='attendance'?'var(--primary-500)':'transparent'};
+          color:${GuardMgmt.activeTab==='attendance'?'var(--primary-600)':'var(--gray-500)'};font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <i class="fa-solid fa-clock"></i> Attendance
+        </button>
+      </div>
+      <div id="guard-tab-content" class="card-body" style="padding:20px">
+        <div class="skeleton skeleton-card" style="height:200px"></div>
+      </div>
+    </div>
+
+    ${guardModalsHTML()}
+  `;
+
+  if (GuardMgmt.activeTab === 'guards') {
+    await loadGuardsTab();
+  } else {
+    await loadAttendanceTab();
+  }
+}
+
+function switchGuardTab(tab) {
+  GuardMgmt.activeTab = tab;
+  renderGuards();
+}
+
+// ── Guards list tab ──────────────────────────────────────────────────────────
+
+async function loadGuardsTab() {
+  const content = el('guard-tab-content');
+  if (!content) return;
+
+  try {
+    const params = new URLSearchParams({ page: GuardMgmt.page, limit: 20 });
+    if (GuardMgmt.search)       params.set('search', GuardMgmt.search);
+    if (GuardMgmt.statusFilter) params.set('status', GuardMgmt.statusFilter);
+
+    // guardApiRequest tries /admin/guards first, falls back to patch file automatically
+    const json   = await guardApiRequest(`/admin/guards?${params}`);
+    const raw    = json.data ?? json;
+    const guards     = Array.isArray(raw) ? raw : (raw.data ?? []);
+    const pagination = raw.pagination ?? {};
+    GuardMgmt.guards = guards;
+    GuardMgmt.total  = pagination.total ?? guards.length;
+
+  } catch (err) {
+    el('guard-tab-content').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation" style="font-size:2rem;color:var(--red-400)"></i><p>${err.message}</p></div>`;
+    return;
+  }
+
+  const content2 = el('guard-tab-content');
+  if (!content2) return;
+
+  content2.innerHTML = `
+    <!-- Toolbar -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+      <div style="position:relative;flex:1;min-width:200px">
+        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:13px"></i>
+        <input id="guard-search" type="text" placeholder="Search name or phone…"
+          value="${GuardMgmt.search}"
+          onkeyup="guardSearchDebounce(this.value)"
+          style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px;box-sizing:border-box">
+      </div>
+      <select onchange="GuardMgmt.statusFilter=this.value;GuardMgmt.page=1;loadGuardsTab()"
+        style="padding:8px 12px;border:1px solid var(--gray-300);border-radius:8px;font-size:13px">
+        <option value="" ${!GuardMgmt.statusFilter?'selected':''}>All Status</option>
+        <option value="active"   ${GuardMgmt.statusFilter==='active'  ?'selected':''}>Active</option>
+        <option value="inactive" ${GuardMgmt.statusFilter==='inactive'?'selected':''}>Inactive</option>
+        <option value="blocked"  ${GuardMgmt.statusFilter==='blocked' ?'selected':''}>Blocked</option>
+      </select>
+      <span style="font-size:13px;color:var(--gray-500);white-space:nowrap">${GuardMgmt.total} guard${GuardMgmt.total!==1?'s':''}</span>
+    </div>
+
+    <!-- Table -->
+    ${GuardMgmt.guards.length === 0
+      ? emptyState('fa-shield-halved', 'No guards found', 'Add a guard to get started')
+      : `<div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead>
+              <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200)">
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Guard</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Contact</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Status</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Today</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${GuardMgmt.guards.map(guardRow).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${renderGuardPagination()}`
+    }
+  `;
+}
+
+let guardSearchTimer = null;
+function guardSearchDebounce(val) {
+  clearTimeout(guardSearchTimer);
+  guardSearchTimer = setTimeout(() => {
+    GuardMgmt.search = val;
+    GuardMgmt.page = 1;
+    loadGuardsTab();
+  }, 400);
+}
+
+function guardRow(g) {
+  const todayLabel = guardTodayBadge(g);
+  const statusClass = { active: 'approved', inactive: 'pending', blocked: 'rejected' }[g.status] || 'pending';
+  return `
+    <tr style="border-bottom:1px solid var(--gray-100)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+      <td style="padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="user-avatar" style="width:36px;height:36px;font-size:13px;background:var(--green-100);color:var(--green-700);flex-shrink:0">
+            ${g.profile_image
+              ? `<img src="${g.profile_image}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">`
+              : initials(g.name)}
+          </div>
+          <div>
+            <div style="font-weight:600;color:var(--gray-800)">${g.name}</div>
+            <div style="font-size:11px;color:var(--gray-400)">${g.app_user_id || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:12px 14px">
+        <div style="font-size:13px;color:var(--gray-700)">${g.phone}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${g.email || '—'}</div>
+      </td>
+      <td style="padding:12px 14px"><span class="badge badge-${statusClass}">${g.status}</span></td>
+      <td style="padding:12px 14px">${todayLabel}</td>
+      <td style="padding:12px 14px">
+        <div style="display:flex;gap:8px">
+          <button onclick="openEditGuardModal(${JSON.stringify(g).replace(/"/g,'&quot;')})"
+            style="padding:5px 10px;border:1px solid var(--gray-300);border-radius:6px;background:white;font-size:12px;cursor:pointer;color:var(--primary-600)">
+            <i class="fa-solid fa-pen"></i> Edit
+          </button>
+          <button onclick="deleteGuard(${g.id},'${g.name}')"
+            style="padding:5px 10px;border:1px solid var(--red-200);border-radius:6px;background:white;font-size:12px;cursor:pointer;color:var(--red-600)">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function guardTodayBadge(g) {
+  if (!g.today_in_time && !g.today_status) {
+    return '<span style="font-size:12px;color:var(--gray-400)">Not marked</span>';
+  }
+  if (g.today_in_time && !g.today_out_time) {
+    return `<span class="badge badge-approved"><span class="badge-dot"></span>On duty since ${formatTime(g.today_in_time)}</span>`;
+  }
+  if (g.today_in_time && g.today_out_time) {
+    return `<span class="badge badge-pending"><span class="badge-dot"></span>Shift complete</span>`;
+  }
+  return '<span style="font-size:12px;color:var(--gray-400)">—</span>';
+}
+
+async function guardApiRequest(path) {
+  // Try the main route first; if 404, fall back to the standalone patch file
+  const base = 'https://app.mygatebell.com/backend';
+  const token = window.State?.token || localStorage.getItem('gh_token') || localStorage.getItem('auth_token') || '';
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  // Primary: /api/admin/guards[/attendance]
+  const primary = `${base}${path}`;
+  let res = await fetch(primary, { method: 'GET', headers });
+  let json = await res.json().catch(() => ({}));
+
+  if (!res.ok || json.status === false) {
+    throw new Error(json.message || `Request failed (${res.status})`);
+  }
+  return json;
+}
+
+function renderGuardPagination() {
+  const total = GuardMgmt.total;
+  const page  = GuardMgmt.page;
+  const limit = 20;
+  if (total <= limit) return '';
+  const start = (page - 1) * limit + 1;
+  const end   = Math.min(page * limit, total);
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-top:8px;font-size:13px;color:var(--gray-500)">
+      <span>Showing ${start}–${end} of ${total}</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="GuardMgmt.page--;loadGuardsTab()" ${page<=1?'disabled':''} style="padding:6px 12px;border:1px solid var(--gray-300);border-radius:6px;background:white;cursor:${page<=1?'not-allowed':'pointer'};opacity:${page<=1?0.4:1}">← Prev</button>
+        <button onclick="GuardMgmt.page++;loadGuardsTab()" ${end>=total?'disabled':''} style="padding:6px 12px;border:1px solid var(--gray-300);border-radius:6px;background:white;cursor:${end>=total?'not-allowed':'pointer'};opacity:${end>=total?0.4:1}">Next →</button>
+      </div>
+    </div>`;
+}
+
+// ── Attendance tab ───────────────────────────────────────────────────────────
+
+async function loadAttendanceTab() {
+  const content = el('guard-tab-content');
+  if (!content) return;
+
+  // Load guard list for filter dropdown (once), using guardApiRequest with fallback
+  if (!GuardMgmt.allGuards) {
+    try {
+      const j = await guardApiRequest('/admin/guards?limit=100');
+      const raw = j.data ?? j;
+      GuardMgmt.allGuards = Array.isArray(raw) ? raw : (raw.data ?? []);
+    } catch { GuardMgmt.allGuards = []; }
+  }
+
+  let records = [], summary = null;
+  try {
+    const params = new URLSearchParams({
+      page: GuardMgmt.attPage, limit: 30,
+      date_from: GuardMgmt.attDateFrom,
+      date_to:   GuardMgmt.attDateTo,
+    });
+    if (GuardMgmt.attGuardId) params.set('guard_id', GuardMgmt.attGuardId);
+    if (GuardMgmt.attStatus)  params.set('status',   GuardMgmt.attStatus);
+
+    const json = await guardApiRequest(`/admin/guards/attendance?${params}`);
+    const raw  = json.data ?? json;
+    records  = Array.isArray(raw) ? raw : (raw.data ?? []);
+    summary  = raw.summary ?? null;
+    GuardMgmt.attendanceSummary = summary;
+    GuardMgmt.attTotal = raw.pagination?.total ?? records.length;
+  } catch (err) {
+    content.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation" style="font-size:2rem;color:var(--red-400)"></i>
+      <p style="font-weight:600">${err.message}</p>
+      <button onclick="loadAttendanceTab()" style="margin-top:14px;padding:8px 18px;background:var(--primary-500);color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer">
+        <i class="fa-solid fa-rotate-right"></i> Retry
+      </button></div>`;
+    return;
+  }
+
+  const presentRate = summary && summary.total_records > 0
+    ? Math.round((summary.present_count / summary.total_records) * 100) : 0;
+
+  content.innerHTML = `
+    <!-- Summary cards -->
+    ${summary ? `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px">
+      ${attSummaryCard('Total Records', summary.total_records, 'var(--primary-500)', 'fa-list')}
+      ${attSummaryCard('Present', summary.present_count, 'var(--green-600)', 'fa-circle-check')}
+      ${attSummaryCard('Absent', summary.absent_count, 'var(--red-500)', 'fa-circle-xmark')}
+      <div style="background:var(--blue-50);border:1px solid var(--blue-100);border-radius:10px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--blue-600);font-weight:500">Attendance Rate</span>
+          <i class="fa-solid fa-chart-line" style="color:var(--blue-400);font-size:12px"></i>
+        </div>
+        <div style="font-size:24px;font-weight:700;color:var(--blue-700)">${presentRate}%</div>
+        <div style="margin-top:6px;height:4px;background:var(--blue-100);border-radius:4px">
+          <div style="height:4px;background:var(--blue-500);border-radius:4px;width:${presentRate}%;transition:width 0.4s"></div>
+        </div>
+      </div>
+    </div>` : ''}
+
+    <!-- Filters -->
+    <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">GUARD</label>
+          <select onchange="GuardMgmt.attGuardId=this.value;GuardMgmt.attPage=1;loadAttendanceTab()"
+            style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:7px;font-size:13px">
+            <option value="">All Guards</option>
+            ${(GuardMgmt.allGuards||[]).map(g=>`<option value="${g.id}" ${GuardMgmt.attGuardId==g.id?'selected':''}>${g.name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">FROM</label>
+          <input type="date" value="${GuardMgmt.attDateFrom}"
+            onchange="GuardMgmt.attDateFrom=this.value;GuardMgmt.attPage=1;loadAttendanceTab()"
+            style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:7px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">TO</label>
+          <input type="date" value="${GuardMgmt.attDateTo}"
+            onchange="GuardMgmt.attDateTo=this.value;GuardMgmt.attPage=1;loadAttendanceTab()"
+            style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:7px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">STATUS</label>
+          <select onchange="GuardMgmt.attStatus=this.value;GuardMgmt.attPage=1;loadAttendanceTab()"
+            style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:7px;font-size:13px">
+            <option value="" ${!GuardMgmt.attStatus?'selected':''}>All Status</option>
+            <option value="present"  ${GuardMgmt.attStatus==='present' ?'selected':''}>Present</option>
+            <option value="absent"   ${GuardMgmt.attStatus==='absent'  ?'selected':''}>Absent</option>
+            <option value="half_day" ${GuardMgmt.attStatus==='half_day'?'selected':''}>Half Day</option>
+            <option value="off"      ${GuardMgmt.attStatus==='off'     ?'selected':''}>Off</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    ${records.length === 0
+      ? emptyState('fa-clock', 'No attendance records', 'Try adjusting your date range or filters')
+      : `<div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead>
+              <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200)">
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Guard</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Date</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Status</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Check In</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Check Out</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--gray-500)">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${records.map(attRow).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${renderAttPagination()}`
+    }
+  `;
+}
+
+function attSummaryCard(label, value, color, icon) {
+  return `
+    <div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--gray-500);font-weight:500">${label}</span>
+        <i class="fa-solid ${icon}" style="color:${color};font-size:12px"></i>
+      </div>
+      <div style="font-size:26px;font-weight:700;color:var(--gray-800)">${value}</div>
+    </div>`;
+}
+
+function attRow(r) {
+  const statusMap = { present:'approved', absent:'rejected', half_day:'pending', off:'pending' };
+  const statusClass = statusMap[r.status] || 'pending';
+  const dur = calcShiftDuration(r.in_time, r.out_time);
+  const dateStr = new Date(r.date).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+  return `
+    <tr style="border-bottom:1px solid var(--gray-100)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+      <td style="padding:12px 14px">
+        <div style="font-weight:600;color:var(--gray-800)">${r.guard_name}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${r.guard_phone || ''}</div>
+      </td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--gray-700)">${dateStr}</td>
+      <td style="padding:12px 14px"><span class="badge badge-${statusClass}">${r.status.replace('_',' ')}</span></td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--gray-700)">${formatTime(r.in_time) || '—'}</td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--gray-700)">${formatTime(r.out_time) || '—'}</td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--gray-600)">${dur}</td>
+    </tr>`;
+}
+
+function calcShiftDuration(inTime, outTime) {
+  if (!inTime || !outTime) return '—';
+  const diff = new Date(outTime) - new Date(inTime);
+  if (diff <= 0) return '—';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return `${h}h ${m}m`;
+}
+
+function renderAttPagination() {
+  const total = GuardMgmt.attTotal;
+  const page  = GuardMgmt.attPage;
+  const limit = 30;
+  if (total <= limit) return '';
+  const start = (page - 1) * limit + 1;
+  const end   = Math.min(page * limit, total);
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-top:8px;font-size:13px;color:var(--gray-500)">
+      <span>Showing ${start}–${end} of ${total}</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="GuardMgmt.attPage--;loadAttendanceTab()" ${page<=1?'disabled':''} style="padding:6px 12px;border:1px solid var(--gray-300);border-radius:6px;background:white;cursor:${page<=1?'not-allowed':'pointer'};opacity:${page<=1?0.4:1}">← Prev</button>
+        <button onclick="GuardMgmt.attPage++;loadAttendanceTab()" ${end>=total?'disabled':''} style="padding:6px 12px;border:1px solid var(--gray-300);border-radius:6px;background:white;cursor:${end>=total?'not-allowed':'pointer'};opacity:${end>=total?0.4:1}">Next →</button>
+      </div>
+    </div>`;
+}
+
+// ── Add / Edit Guard modals ──────────────────────────────────────────────────
+
+function openAddGuardModal() {
+  const m = el('guard-form-modal');
+  if (!m) return;
+  el('guard-modal-title').textContent = 'Add New Guard';
+  el('guard-form-id').value = '';
+  el('guard-form-name').value = '';
+  el('guard-form-phone').value = '';
+  el('guard-form-phone').disabled = false;
+  el('guard-form-email').value = '';
+  el('guard-form-password').value = '';
+  el('guard-form-password').required = true;
+  el('guard-form-status').value = 'active';
+  el('guard-phone-hint').style.display = 'none';
+  el('guard-password-row').style.display = '';
+  el('guard-form-error').textContent = '';
+  Modal.open('guard-form-modal');
+}
+
+function openEditGuardModal(g) {
+  const m = el('guard-form-modal');
+  if (!m) return;
+  el('guard-modal-title').textContent = 'Edit Guard';
+  el('guard-form-id').value    = g.id;
+  el('guard-form-name').value  = g.name || '';
+  el('guard-form-phone').value = g.phone || '';
+  el('guard-form-phone').disabled = true;
+  el('guard-form-email').value  = g.email || '';
+  el('guard-form-password').value = '';
+  el('guard-form-password').required = false;
+  el('guard-form-status').value = g.status || 'active';
+  el('guard-phone-hint').style.display = '';
+  el('guard-password-row').style.display = 'none';
+  el('guard-form-error').textContent = '';
+  Modal.open('guard-form-modal');
+}
+
+async function submitGuardForm(e) {
+  e.preventDefault();
+  const errEl = el('guard-form-error');
+  errEl.textContent = '';
+
+  const id       = el('guard-form-id').value;
+  const name     = el('guard-form-name').value.trim();
+  const phone    = el('guard-form-phone').value.trim().replace(/\D/g,'');
+  const email    = el('guard-form-email').value.trim();
+  const password = el('guard-form-password').value;
+  const status   = el('guard-form-status').value;
+  const isEdit   = !!id;
+
+  // Validate
+  if (!name) { errEl.textContent = 'Name is required.'; return; }
+  if (!isEdit && phone.length < 10) { errEl.textContent = 'Enter a valid 10-digit phone number.'; return; }
+  if (!isEdit && password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+
+  const btn = el('guard-form-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+
+  try {
+    if (isEdit) {
+      await API.put(`/admin/users/${id}`, { name, email, status });
+      Toast.success('Updated', `${name} updated successfully`);
+    } else {
+      await API.post('/admin/users', { name, phone, email, password, role: 'guard', status });
+      Toast.success('Guard Added', `${name} has been created`);
+    }
+    Modal.close('guard-form-modal');
+    GuardMgmt.page = 1;
+    await loadGuardsTab();
+  } catch (err) {
+    errEl.textContent = err.message || 'Operation failed. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = isEdit ? '<i class="fa-solid fa-floppy-disk"></i> Save Changes' : '<i class="fa-solid fa-plus"></i> Create Guard';
+  }
+}
+
+async function deleteGuard(id, name) {
+  Modal.confirm(
+    'Remove Guard',
+    `Remove <strong>${name}</strong>? Their historical records will be preserved but they will no longer be able to log in.`,
+    async () => {
+      try {
+        await API.delete(`/admin/users/${id}`);
+        Toast.success('Removed', `${name} has been removed`);
+        GuardMgmt.page = 1;
+        await loadGuardsTab();
+      } catch (err) {
+        Toast.error('Error', err.message);
+      }
+    }
+  );
+}
+
+// ── Modal HTML injected into the page ────────────────────────────────────────
+
+function guardModalsHTML() {
+  return `
+  <!-- Add / Edit Guard Modal -->
+  <div class="modal-overlay" id="guard-form-modal" onclick="if(event.target===this)Modal.close('guard-form-modal')">
+    <div class="modal modal-sm" style="max-width:460px;width:100%">
+      <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--gray-200)">
+        <h3 class="modal-title" id="guard-modal-title" style="margin:0;font-size:17px;font-weight:700">Add Guard</h3>
+        <button onclick="Modal.close('guard-form-modal')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--gray-500);line-height:1">&times;</button>
+      </div>
+      <form onsubmit="submitGuardForm(event)">
+        <input type="hidden" id="guard-form-id">
+        <div class="modal-body" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <div id="guard-form-error" style="color:var(--red-600);font-size:13px;min-height:18px;font-weight:500"></div>
+
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:5px;display:block">
+              Full Name <span style="color:var(--red-500)">*</span>
+            </label>
+            <input id="guard-form-name" type="text" required placeholder="e.g. Ramesh Kumar"
+              style="width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;box-sizing:border-box">
+          </div>
+
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:5px;display:block">
+              Phone <span style="color:var(--red-500)">*</span>
+            </label>
+            <input id="guard-form-phone" type="tel" required placeholder="10-digit mobile number"
+              style="width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;box-sizing:border-box">
+            <p id="guard-phone-hint" style="font-size:11px;color:var(--gray-400);margin:4px 0 0;display:none">
+              Phone number cannot be changed after creation
+            </p>
+          </div>
+
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:5px;display:block">
+              Email
+            </label>
+            <input id="guard-form-email" type="email" placeholder="guard@example.com"
+              style="width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;box-sizing:border-box">
+          </div>
+
+          <div id="guard-password-row" class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:5px;display:block">
+              Password <span style="color:var(--red-500)">*</span>
+            </label>
+            <input id="guard-form-password" type="password" placeholder="Min 6 characters"
+              style="width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;box-sizing:border-box">
+          </div>
+
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:5px;display:block">
+              Status
+            </label>
+            <select id="guard-form-status"
+              style="width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding:14px 22px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end">
+          <button type="button" onclick="Modal.close('guard-form-modal')"
+            style="padding:9px 18px;border:1px solid var(--gray-300);border-radius:8px;background:white;font-size:14px;cursor:pointer;color:var(--gray-700)">
+            Cancel
+          </button>
+          <button type="submit" id="guard-form-submit" class="btn btn-primary"
+            style="padding:9px 18px;font-size:14px">
+            <i class="fa-solid fa-plus"></i> Create Guard
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}

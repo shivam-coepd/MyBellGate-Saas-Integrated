@@ -28,7 +28,9 @@ const Login: React.FC = () => {
         } else if (user.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
-          navigate('/dashboard');
+          // Guards and residents use the mobile app — show a friendly message
+          navigate('/login');
+          setError('This portal is for administrators only. Please use the MyGate mobile app.');
         }
       }
     } catch (err: any) {

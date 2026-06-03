@@ -57,7 +57,7 @@ const SocietyAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [societyData, setSocietyData] = useState<SocietyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards'>('overview');
 
   useEffect(() => {
     if (user?.society_id) {
@@ -332,6 +332,12 @@ const SocietyAdminDashboard: React.FC = () => {
           >
             Helpdesk
           </button>
+          <button
+            onClick={() => navigate('/admin/guards')}
+            className="px-4 py-2 font-medium whitespace-nowrap text-gray-500 hover:text-gray-700"
+          >
+            Guards
+          </button>
         </div>
       </div>
 
@@ -483,12 +489,20 @@ const SocietyAdminDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">User Management</h2>
-              <button 
-                onClick={() => navigate('/admin/users')}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-              >
-                Manage Users
-              </button>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => navigate('/admin/guards')}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm"
+                >
+                  Manage Guards
+                </button>
+                <button 
+                  onClick={() => navigate('/admin/users')}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm"
+                >
+                  All Users
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard

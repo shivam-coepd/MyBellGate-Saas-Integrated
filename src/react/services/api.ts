@@ -512,6 +512,67 @@ class ApiClient {
     });
   }
 
+  // Guard Module (guard self-service — used by mobile app only, kept for API completeness)
+  async getGuardResidents(params?: { page?: number; limit?: number; search?: string }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/guard/residents${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getGuardVehicleEntries(params?: { page?: number; limit?: number; status?: string }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/guard/vehicle-entries${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async addGuardVehicleEntry(data: {
+    vehicle_type: string;
+    vehicle_number: string;
+    driver_name: string;
+    driver_phone: string;
+    purpose: string;
+    resident_id?: number | null;
+  }) {
+    return this.request('/guard/vehicle-entries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateGuardVehicleEntryStatus(id: string | number, status: 'inside' | 'exited') {
+    return this.request(`/guard/vehicle-entries/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async getGuardAttendance() {
+    return this.request('/guard/attendance');
+  }
+
+  async markGuardAttendance(type: 'in' | 'out') {
+    return this.request('/guard/attendance/mark', {
+      method: 'POST',
+      body: JSON.stringify({ type }),
+    });
+  }
+
+  // Admin Guard Management
+  async getAdminGuards(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/guards${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAdminGuardAttendance(params?: {
+    page?: number;
+    limit?: number;
+    guard_id?: number;
+    date_from?: string;
+    date_to?: string;
+    status?: string;
+  }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/guards/attendance${queryString ? `?${queryString}` : ''}`);
+  }
+
   // Assets
   async getAssetCategories() {
     return this.request('/assets/categories');
