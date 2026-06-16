@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import apiClient from '../services/api';
+import { requestFirebasePermission } from '../services/fcmService';
 
 interface User {
   id: string;
@@ -77,6 +78,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           (window as any).State.token = token;
           (window as any).State.user = data.user;
         }
+        // Register FCM web push token after successful login
+        requestFirebasePermission().catch((e) =>
+          console.warn('FCM registration skipped:', e)
+        );
       } else {
         throw new Error(response.message);
       }

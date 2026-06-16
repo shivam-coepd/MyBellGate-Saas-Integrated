@@ -599,6 +599,31 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Notifications
+  async getNotifications(params?: { page?: number; limit?: number; unread_only?: number }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/notifications${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async markNotificationRead(id: string | number) {
+    return this.request(`/notifications/${id}/read`, { method: 'PUT' });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/notifications/read-all', { method: 'PUT' });
+  }
+
+  async getUnreadNotificationCount() {
+    return this.request('/notifications/unread-count');
+  }
+
+  async registerWebPushToken(token: string) {
+    return this.request('/notifications/tokens', {
+      method: 'POST',
+      body: JSON.stringify({ device_token: token, device_type: 'web' }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

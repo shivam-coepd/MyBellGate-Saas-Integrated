@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
+import NotificationBell from '../components/NotificationBell';
 import { 
   Users, Building2, DollarSign, AlertCircle, CheckCircle, 
   Clock, FileText, Bell, Shield, Package, Wrench 
@@ -270,12 +271,15 @@ const SocietyAdminDashboard: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-800">{societyData?.name}</h1>
             <p className="text-gray-500">Admin Dashboard - {societyData?.city}, {societyData?.state}</p>
           </div>
-          <button
-            onClick={logout}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <button
+              onClick={logout}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
