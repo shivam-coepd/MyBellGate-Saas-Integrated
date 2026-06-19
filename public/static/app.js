@@ -596,6 +596,12 @@ function getNavItems(role) {
       roles: ["admin"],
     },
     {
+      id: "community",
+      icon: "fa-users-rays",
+      label: "Community",
+      roles: ["admin"],
+    },
+    {
       id: "guards",
       icon: "fa-shield-halved",
       label: "Guards",
@@ -631,6 +637,7 @@ function navigateTo(page) {
     billing: "Billing",
     security: "Security Panel",
     amenities: "Amenities",
+    community: "Community Management",
     guards: "Guard Management",
   };
   if (el("breadcrumb-current"))
@@ -668,6 +675,9 @@ function navigateTo(page) {
         break;
       case "amenities":
         renderAmenities();
+        break;
+      case "community":
+        renderCommunity();
         break;
       case "guards":
         renderGuards();
@@ -2814,6 +2824,153 @@ function filterBills() {
     return ms && mm;
   });
   el("bills-list").innerHTML = renderBillCards(filtered);
+}
+
+// ============ COMMUNITY MANAGEMENT ============
+async function renderCommunity() {
+  try {
+    const response = await API.get("/community/posts?limit=100");
+    const posts = Array.isArray(response) ? response : (response.data || []);
+    State.data.community = posts;
+    
+    const pc = el("page-content");
+    pc.innerHTML = `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 class="page-title"><i class="fa-solid fa-users-rays" style="color:var(--purple-500)"></i> Community feed</h1>
+          <p class="page-subtitle">${posts.length} posts from residents</p>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="renderCommunity()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="Modal.open('create-community-modal')"><i class="fa-solid fa-plus"></i> Create Post</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Posts</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Author</th>
+                <th>Content</th>
+                <th>Media</th>
+                <th>Engagement</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="community-list">
+              ${renderCommunityCards(posts)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Create Community Post Modal -->
+      <div class="modal-overlay" id="create-community-modal">
+        <div class="modal modal-md">
+          <div class="modal-header">
+            <span class="modal-title">Create Community Post</span>
+            <div class="modal-close" onclick="Modal.close('create-community-modal')"><i class="fa-solid fa-times"></i></div>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Post Content <span class="required">*</span></label>
+              <textarea class="form-input" id="cp-content" rows="4" placeholder="What would you like to share with the community?"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Image URL (Optional)</label>
+              <input type="text" class="form-input" id="cp-image" placeholder="https://example.com/image.jpg">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="Modal.close('create-community-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="createCommunityPost()">Post</button>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    showError(err.message || "Failed to load community posts");
+  }
+}
+
+function renderCommunityCards(posts) {
+  if (!posts || posts.length === 0) {
+    return `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-500)">No community posts found.</td></tr>`;
+  }
+  
+  return posts.map(post => {
+    const authorName = post.user_name || 'Unknown User';
+    const avatar = post.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=random`;
+    const unit = post.unit || 'No unit';
+    const hasImage = post.image ? '<span style="color:var(--blue-500)"><i class="fa-solid fa-image"></i> Image</span>' : '<span class="text-muted">Text only</span>';
+    const date = post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Unknown';
+    
+    return `
+      <tr>
+        <td>
+          <div class="flex items-center gap-3">
+            <img src="${avatar}" alt="${authorName}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+            <div>
+              <div class="font-semibold">${authorName}</div>
+              <div class="text-xs text-muted">${unit}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${post.content}">
+            ${post.content}
+          </div>
+        </td>
+        <td>${hasImage}</td>
+        <td>
+          <span style="margin-right:12px"><i class="fa-solid fa-heart" style="color:var(--red-400)"></i> ${post.likes_count || 0}</span>
+          <span><i class="fa-solid fa-comment" style="color:var(--blue-400)"></i> ${post.comments_count || 0}</span>
+        </td>
+        <td class="text-muted">${date}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="deleteCommunityPost(${post.id})" style="color:var(--red-500)" title="Delete Post">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function deleteCommunityPost(id) {
+  Modal.confirm("Delete Post", "Are you sure you want to delete this community post?", async () => {
+    try {
+      await API.delete(`/community/posts/${id}`);
+      Toast.success("Deleted", "Post has been removed");
+      renderCommunity();
+    } catch (err) {
+      Toast.error("Error", err.message || "Failed to delete post");
+    }
+  });
+}
+
+async function createCommunityPost() {
+  const content = el("cp-content").value.trim();
+  const image = el("cp-image").value.trim();
+  
+  if (!content) return Toast.error("Error", "Post content is required");
+  
+  try {
+    const payload = { content };
+    if (image) payload.image = image;
+    
+    await API.post("/community/posts", payload);
+    Toast.success("Success", "Post created successfully");
+    Modal.close("create-community-modal");
+    renderCommunity();
+  } catch (err) {
+    Toast.error("Error", err.message || "Failed to create post");
+  }
 }
 
 // ============ SECURITY PANEL ============

@@ -624,6 +624,22 @@ class ApiClient {
       body: JSON.stringify({ device_token: token, device_type: 'web' }),
     });
   }
+
+  // Community Management
+  async getCommunityPosts(params?: { page?: number; limit?: number }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/community/posts${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async deleteCommunityPost(id: string | number) {
+    return this.request(`/community/posts/${id}`, { method: 'DELETE' });
+  }
+
+  // Marketplace Management (placeholder for future admin use)
+  async getMarketplaceItems(params?: { page?: number; limit?: number }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/marketplace/products${queryString ? `?${queryString}` : ''}`);
+  }
 }
 
 export const apiClient = new ApiClient();

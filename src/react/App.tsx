@@ -17,6 +17,7 @@ import UserManagement from './pages/UserManagement';
 import BuildingManagement from './pages/BuildingManagement';
 import AccountingManagement from './pages/AccountingManagement';
 import AdminGuardManagement from './pages/AdminGuardManagement';
+import CommunityManagement from './pages/CommunityManagement';
 
 /** Protect routes: redirect to login if not authenticated, or to the correct dashboard if wrong role. */
 const ProtectedRoute: React.FC<{
@@ -114,6 +115,10 @@ function AppRoutes() {
         <Route
           path="/admin/guards"
           element={<ProtectedRoute element={<AdminGuardManagement />} allowedRoles={['admin']} />}
+        />
+        <Route
+          path="/admin/community"
+          element={<ProtectedRoute element={<CommunityManagement />} allowedRoles={['admin']} />}
         />
 
         {/* Fallback */}

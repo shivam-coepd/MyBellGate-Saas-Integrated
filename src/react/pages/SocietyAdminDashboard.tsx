@@ -58,7 +58,7 @@ const SocietyAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [societyData, setSocietyData] = useState<SocietyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards' | 'community'>('overview');
 
   useEffect(() => {
     if (user?.society_id) {
@@ -342,6 +342,12 @@ const SocietyAdminDashboard: React.FC = () => {
           >
             Guards
           </button>
+          <button
+            onClick={() => navigate('/admin/community')}
+            className="px-4 py-2 font-medium whitespace-nowrap text-gray-500 hover:text-gray-700"
+          >
+            Community
+          </button>
         </div>
       </div>
 
@@ -484,6 +490,31 @@ const SocietyAdminDashboard: React.FC = () => {
                     <p className="text-2xl font-bold">{societyData.total_vehicles}</p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm font-medium"
+                >
+                  Manage Users
+                </button>
+                <button
+                  onClick={() => navigate('/admin/guards')}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm font-medium"
+                >
+                  Manage Guards
+                </button>
+                <button
+                  onClick={() => navigate('/admin/community')}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition text-sm font-medium"
+                >
+                  Community Management
+                </button>
               </div>
             </div>
           </div>
