@@ -58,7 +58,7 @@ const SocietyAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [societyData, setSocietyData] = useState<SocietyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards' | 'community'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards' | 'community' | 'events'>('overview');
 
   useEffect(() => {
     if (user?.society_id) {
@@ -337,16 +337,34 @@ const SocietyAdminDashboard: React.FC = () => {
             Helpdesk
           </button>
           <button
-            onClick={() => navigate('/admin/guards')}
-            className="px-4 py-2 font-medium whitespace-nowrap text-gray-500 hover:text-gray-700"
+            onClick={() => setActiveTab('guards')}
+            className={`px-4 py-2 font-medium whitespace-nowrap ${
+              activeTab === 'guards'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
           >
             Guards
           </button>
           <button
-            onClick={() => navigate('/admin/community')}
-            className="px-4 py-2 font-medium whitespace-nowrap text-gray-500 hover:text-gray-700"
+            onClick={() => setActiveTab('community')}
+            className={`px-4 py-2 font-medium whitespace-nowrap ${
+              activeTab === 'community'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
           >
             Community
+          </button>
+          <button
+            onClick={() => setActiveTab('events')}
+            className={`px-4 py-2 font-medium whitespace-nowrap ${
+              activeTab === 'events'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Events
           </button>
         </div>
       </div>
@@ -675,6 +693,72 @@ const SocietyAdminDashboard: React.FC = () => {
               </div>
             </div>
             <p className="text-gray-500 text-center py-8">Helpdesk management interface coming soon...</p>
+          </div>
+        )}
+
+        {activeTab === 'guards' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Guards Management</h2>
+              <button 
+                onClick={() => navigate('/admin/guards')}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
+              >
+                Manage Guards
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <button 
+                onClick={() => navigate('/admin/guards')}
+                className="text-green-500 hover:text-green-600 underline"
+              >
+                Click here to access full guards management interface
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'community' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Community Management</h2>
+              <button 
+                onClick={() => navigate('/admin/community')}
+                className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
+              >
+                Manage Community
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <button 
+                onClick={() => navigate('/admin/community')}
+                className="text-purple-500 hover:text-purple-600 underline"
+              >
+                Click here to access full community management interface
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Events Management</h2>
+              <button 
+                onClick={() => navigate('/admin/events')}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition"
+              >
+                Manage Events
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <button 
+                onClick={() => navigate('/admin/events')}
+                className="text-orange-500 hover:text-orange-600 underline"
+              >
+                Click here to access full events management interface
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -602,6 +602,12 @@ function getNavItems(role) {
       roles: ["admin"],
     },
     {
+      id: "events",
+      icon: "fa-calendar-check",
+      label: "Events",
+      roles: ["admin"],
+    },
+    {
       id: "guards",
       icon: "fa-shield-halved",
       label: "Guards",
@@ -638,6 +644,7 @@ function navigateTo(page) {
     security: "Security Panel",
     amenities: "Amenities",
     community: "Community Management",
+    events: "Event Management",
     guards: "Guard Management",
   };
   if (el("breadcrumb-current"))
@@ -678,6 +685,9 @@ function navigateTo(page) {
         break;
       case "community":
         renderCommunity();
+        break;
+      case "events":
+        renderEvents();
         break;
       case "guards":
         renderGuards();
@@ -2970,6 +2980,421 @@ async function createCommunityPost() {
     renderCommunity();
   } catch (err) {
     Toast.error("Error", err.message || "Failed to create post");
+  }
+}
+
+
+// ============ EVENT MANAGEMENT ============
+async function renderEvents() {
+  try {
+    const response = await API.get("/events?t=" + Date.now());
+    let events = [];
+    if (Array.isArray(response)) events = response;
+    else if (response.events && Array.isArray(response.events)) events = response.events;
+    else if (response.data && Array.isArray(response.data.events)) events = response.data.events;
+    else if (response.data && Array.isArray(response.data)) events = response.data;
+    
+    State.data.events = events;
+    
+    const pc = el("page-content");
+    pc.innerHTML = `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 class="page-title"><i class="fa-solid fa-calendar-star" style="color:var(--orange-500)"></i> Event Management</h1>
+          <p class="page-subtitle">${events.length} upcoming and past events</p>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="renderEvents()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="Modal.open('create-event-modal')"><i class="fa-solid fa-plus"></i> Create Event</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Society Events</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Attendees</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="events-list">
+              ${renderEventCards(events)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Create Event Modal -->
+      <div class="modal-overlay" id="create-event-modal">
+        <div class="modal modal-md">
+          <div class="modal-header">
+            <span class="modal-title">Create Event</span>
+            <div class="modal-close" onclick="Modal.close('create-event-modal')"><i class="fa-solid fa-times"></i></div>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Event Title <span class="required">*</span></label>
+              <input type="text" class="form-input" id="ev-title" placeholder="e.g. Diwali Celebration">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <input type="text" class="form-input" id="ev-category" placeholder="e.g. Festival, Meeting, Sports" value="Event">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Organizer</label>
+              <input type="text" class="form-input" id="ev-organizer" placeholder="e.g. Cultural Committee">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Price / Fees</label>
+              <input type="text" class="form-input" id="ev-price" placeholder="e.g. Free, â‚¹500/person" value="Free">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tags (comma separated)</label>
+              <input type="text" class="form-input" id="ev-tags" placeholder="e.g. Festival, Diya, Celebration">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description <span class="required">*</span></label>
+              <textarea class="form-input" id="ev-description" rows="3" placeholder="Details about the event..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date & Time <span class="required">*</span></label>
+              <input type="datetime-local" class="form-input" id="ev-date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location <span class="required">*</span></label>
+              <input type="text" class="form-input" id="ev-location" placeholder="e.g. Clubhouse">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cover Image</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" class="form-input" id="ev-image" placeholder="Enter URL or upload image" style="flex:1;">
+                <input type="file" id="ev-image-file" style="display:none;" accept="image/*" onchange="handleEventImageUpload(this)">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('ev-image-file').click()" id="ev-upload-btn">
+                  <i class="fa-solid fa-upload"></i> Upload
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="Modal.close('create-event-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitSocietyEvent()">Create Event</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Event Modal -->
+      <div class="modal-overlay" id="edit-event-modal">
+        <div class="modal modal-md">
+          <div class="modal-header">
+            <h3 class="modal-title">Edit Event</h3>
+            <div class="modal-close" onclick="Modal.close('edit-event-modal')"><i class="fa-solid fa-times"></i></div>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="edit-ev-id">
+            <div class="form-group">
+              <label class="form-label">Event Title <span class="required">*</span></label>
+              <input type="text" class="form-input" id="edit-ev-title" placeholder="e.g. Diwali Celebration">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <input type="text" class="form-input" id="edit-ev-category" placeholder="e.g. Festival, Meeting, Sports">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Organizer</label>
+              <input type="text" class="form-input" id="edit-ev-organizer" placeholder="e.g. Cultural Committee">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Price / Fees</label>
+              <input type="text" class="form-input" id="edit-ev-price" placeholder="e.g. Free, ₹500/person">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tags (comma separated)</label>
+              <input type="text" class="form-input" id="edit-ev-tags" placeholder="e.g. Festival, Diya, Celebration">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description <span class="required">*</span></label>
+              <textarea class="form-input" id="edit-ev-description" rows="3" placeholder="Details about the event..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date & Time <span class="required">*</span></label>
+              <input type="datetime-local" class="form-input" id="edit-ev-date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location <span class="required">*</span></label>
+              <input type="text" class="form-input" id="edit-ev-location" placeholder="e.g. Clubhouse">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cover Image</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" class="form-input" id="edit-ev-image" placeholder="Enter URL or upload image" style="flex:1;">
+                <input type="file" id="edit-ev-image-file" style="display:none;" accept="image/*" onchange="handleEventImageUploadEdit(this)">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-ev-image-file').click()" id="edit-ev-upload-btn">
+                  <i class="fa-solid fa-upload"></i> Upload
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="Modal.close('edit-event-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="updateSocietyEvent()">Update Event</button>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    showError(err.message || "Failed to load events");
+  }
+}
+
+function renderEventCards(events) {
+  if (!events || events.length === 0) {
+    return `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-500)">No events found.</td></tr>`;
+  }
+  
+  return events.map(ev => {
+    const date = ev.event_date ? new Date(ev.event_date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Unknown';
+    const attendees = ev.attendees ? ev.attendees.length : (ev.attendees_count || 0);
+    
+    return `
+      <tr>
+        <td class="font-semibold">${ev.title}</td>
+        <td>
+          <div style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ev.description}">
+            ${ev.description || ''}
+          </div>
+        </td>
+        <td><span class="badge badge-info"><i class="fa-regular fa-clock"></i> ${date}</span></td>
+        <td><i class="fa-solid fa-location-dot text-muted"></i> ${ev.location}</td>
+        <td><i class="fa-solid fa-users text-muted"></i> ${attendees} going</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="openEditEventModal(${ev.id})" style="color:var(--blue-500)" title="Edit Event">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteEvent(${ev.id})" style="color:var(--red-500)" title="Delete Event">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function deleteEvent(id) {
+  Modal.confirm("Delete Event", "Are you sure you want to cancel and delete this event?", async () => {
+    try {
+      await API.delete(`/events/${id}`);
+      Toast.success("Deleted", "Event has been deleted");
+      renderEvents();
+    } catch (err) {
+      Toast.error("Error", err.message || "Failed to delete event");
+    }
+  });
+}
+
+
+async function handleEventImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const btn = document.getElementById("ev-upload-btn");
+  const urlInput = document.getElementById("ev-image");
+  const originalHtml = btn.innerHTML;
+  
+  try {
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "events");
+    
+    const headers = {};
+    if (State.token) {
+      headers["Authorization"] = `Bearer ${State.token}`;
+    }
+    
+    // We use raw fetch here because API.request hardcodes Content-Type: application/json
+    const response = await fetch(`${API.base}/upload/file`, {
+      method: "POST",
+      headers: headers,
+      body: formData
+    });
+    
+    const result = await response.json();
+    if (result.status && result.data && result.data.url) {
+      urlInput.value = result.data.url;
+      Toast.success("Success", "Image uploaded to AWS S3 successfully");
+    } else {
+      throw new Error(result.message || "Upload failed");
+    }
+  } catch (err) {
+    Toast.error("Error", err.message || "Failed to upload image");
+    console.error("Upload error:", err);
+  } finally {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    input.value = ""; // Reset input so same file can be selected again
+  }
+}
+
+async function submitSocietyEvent() {
+  const title = el("ev-title").value.trim();
+  const description = el("ev-description").value.trim();
+  const date = el("ev-date").value;
+  const location = el("ev-location").value.trim();
+  const image = el("ev-image").value.trim();
+  
+  const category = el("ev-category").value.trim();
+  const organizer = el("ev-organizer").value.trim();
+  const price = el("ev-price").value.trim();
+  const tags = el("ev-tags").value.trim();
+  
+  if (!title || !description || !date || !location) {
+    return Toast.error("Error", "All fields are required");
+  }
+  
+  try {
+    const dateParts = date.split('T');
+    const payload = {
+      title,
+      description,
+      event_date: dateParts[0],
+      event_time: dateParts[1] ? dateParts[1] + ':00' : null,
+      location,
+      category: category || 'Event',
+      organizer: organizer || null,
+      price: price || 'Free',
+      tags: tags || null
+    };
+    
+    if (image) payload.cover_image = image;
+    
+    await API.post("/events", payload);
+    Toast.success("Success", "Event created successfully");
+    Modal.close("create-event-modal");
+    renderEvents();
+  } catch (err) {
+    Toast.error("Error", err.message || "Failed to create event");
+  }
+}
+
+function openEditEventModal(id) {
+  const event = State.data.events.find(e => e.id === id);
+  if (!event) return;
+  
+  el("edit-ev-id").value = event.id;
+  el("edit-ev-title").value = event.title || '';
+  el("edit-ev-category").value = event.category || '';
+  
+  if (event.event_date) {
+    // format to YYYY-MM-DDTHH:mm
+    let dt = event.event_date;
+    if (event.event_time) {
+      dt += 'T' + event.event_time;
+    } else {
+      dt += 'T00:00';
+    }
+    el("edit-ev-date").value = dt.substring(0, 16);
+  } else {
+    el("edit-ev-date").value = '';
+  }
+  
+  el("edit-ev-location").value = event.location || '';
+  el("edit-ev-organizer").value = event.organizer || '';
+  el("edit-ev-price").value = event.price || '';
+  el("edit-ev-tags").value = event.tags || '';
+  el("edit-ev-image").value = event.cover_image || '';
+  el("edit-ev-description").value = event.description || '';
+  
+  Modal.open("edit-event-modal");
+}
+
+async function updateSocietyEvent() {
+  const id = el("edit-ev-id").value;
+  const title = el("edit-ev-title").value.trim();
+  const description = el("edit-ev-description").value.trim();
+  const date = el("edit-ev-date").value;
+  const location = el("edit-ev-location").value.trim();
+  const image = el("edit-ev-image").value.trim();
+  
+  const category = el("edit-ev-category").value.trim();
+  const organizer = el("edit-ev-organizer").value.trim();
+  const price = el("edit-ev-price").value.trim();
+  const tags = el("edit-ev-tags").value.trim();
+  
+  if (!title || !description || !date) {
+    Toast.error("Validation Error", "Title, description and date are required");
+    return;
+  }
+  
+  try {
+    const dateParts = date.split('T');
+    const payload = {
+      title,
+      description,
+      event_date: dateParts[0],
+      event_time: dateParts[1] ? dateParts[1] + ':00' : null,
+      location,
+      category: category || 'Event',
+      organizer: organizer || null,
+      price: price || 'Free',
+      tags: tags || null
+    };
+    
+    if (image) payload.cover_image = image;
+    
+    await API.put(`/events/${id}`, payload);
+    Toast.success("Success", "Event updated successfully");
+    Modal.close("edit-event-modal");
+    renderEvents();
+  } catch (err) {
+    Toast.error("Error", err.message || "Failed to update event");
+  }
+}
+
+async function handleEventImageUploadEdit(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const btn = document.getElementById("edit-ev-upload-btn");
+  const urlInput = document.getElementById("edit-ev-image");
+  const originalHtml = btn.innerHTML;
+  
+  try {
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", "events");
+    
+    const token = State.token || localStorage.getItem('token');
+    const response = await fetch(`${API.base}/upload/file`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      },
+      body: fd
+    });
+    
+    const result = await response.json();
+    if (result.status && result.data?.url) {
+      urlInput.value = result.data.url;
+      Toast.success("Success", "Image uploaded");
+    } else {
+      throw new Error(result.message || "Upload failed");
+    }
+  } catch (err) {
+    Toast.error("Error", err.message || "Failed to upload image");
+  } finally {
+    btn.innerHTML = originalHtml;
+    input.value = "";
   }
 }
 

@@ -640,6 +640,30 @@ class ApiClient {
     const queryString = new URLSearchParams(params as any).toString();
     return this.request(`/marketplace/products${queryString ? `?${queryString}` : ''}`);
   }
+
+  // Events Management
+  async getEvents(params?: { page?: number; limit?: number }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/events${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async createEvent(data: any) {
+    return this.request('/events', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateEvent(id: string | number, data: any) {
+    return this.request(`/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteEvent(id: string | number) {
+    return this.request(`/events/${id}`, { method: 'DELETE' });
+  }
 }
 
 export const apiClient = new ApiClient();
