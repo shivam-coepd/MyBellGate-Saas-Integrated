@@ -608,6 +608,12 @@ function getNavItems(role) {
       roles: ["admin"],
     },
     {
+      id: "polls",
+      icon: "fa-square-poll-vertical",
+      label: "Polls",
+      roles: ["admin"],
+    },
+    {
       id: "guards",
       icon: "fa-shield-halved",
       label: "Guards",
@@ -645,6 +651,7 @@ function navigateTo(page) {
     amenities: "Amenities",
     community: "Community Management",
     events: "Event Management",
+    polls: "Polls Management",
     guards: "Guard Management",
   };
   if (el("breadcrumb-current"))
@@ -688,6 +695,9 @@ function navigateTo(page) {
         break;
       case "events":
         renderEvents();
+        break;
+      case "polls":
+        renderPolls();
         break;
       case "guards":
         renderGuards();
@@ -1989,7 +1999,103 @@ function filterResidents() {
   if (tbody) tbody.innerHTML = renderResidentRows(filtered, State.data.flats);
 }
 
-// ============ COMPLAINTS PAGE ============
+// ============ POLLS PAGE ============
+async function renderPolls() {
+  const pc = el("page-content");
+  pc.innerHTML = `
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-title">Polls</h1>
+        <p class="page-subtitle">Manage society polls</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-ghost btn-sm" onclick="renderPolls()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Society Polls</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Created By</th>
+                <th>Ends At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="polls-list">
+              <tr><td colspan="6" style="text-align:center;padding:20px;">Loading polls...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  try {
+    const response = await API.get("/communications/polls?limit=100");
+    let polls = [];
+    if (Array.isArray(response)) polls = response;
+    else if (response.data && Array.isArray(response.data)) polls = response.data;
+    else if (response.data && Array.isArray(response.data.data)) polls = response.data.data;
+
+    const listEl = el("polls-list");
+    if (!polls || polls.length === 0) {
+      listEl.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-500)">No polls found.</td></tr>';
+      return;
+    }
+
+    listEl.innerHTML = polls.map(p => `
+      <tr>
+        <td style="font-weight:600;">${p.question}</td>
+        <td><span class="badge" style="background:var(--gray-100);color:var(--gray-800)">${p.poll_type}</span></td>
+        <td>${p.is_active ? '<span class="badge" style="background:var(--green-100);color:var(--green-800)">Active</span>' : '<span class="badge" style="background:var(--gray-100);color:var(--gray-600)">Closed</span>'}</td>
+        <td>${p.created_by_name || 'Admin'}</td>
+        <td>${new Date(p.ends_at).toLocaleDateString()}</td>
+        <td>
+          <div class="flex items-center gap-2">
+            ${p.is_active ? `<button class="btn btn-ghost btn-sm" onclick="closePoll(${p.id})" title="Close Poll"><i class="fa-solid fa-lock" style="color:var(--orange-500)"></i></button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="deletePoll(${p.id})" title="Delete Poll"><i class="fa-solid fa-trash" style="color:var(--red-500)"></i></button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    showError(err.message || "Failed to load polls");
+  }
+}
+
+async function closePoll(id) {
+  Modal.confirm("Close Poll", "Are you sure you want to close this poll? Voting will be stopped.", async () => {
+    try {
+      await API.put(`/communications/polls/${id}`, { is_active: false });
+      Toast.success("Poll Closed", "The poll has been closed successfully.");
+      renderPolls();
+    } catch(err) {
+      showError(err.message || "Failed to close poll");
+    }
+  });
+}
+
+async function deletePoll(id) {
+  Modal.confirm("Delete Poll", "Are you sure you want to delete this poll? All votes and data will be lost.", async () => {
+    try {
+      await API.delete(`/communications/polls/${id}`);
+      Toast.success("Poll Deleted", "The poll has been deleted successfully.");
+      renderPolls();
+    } catch(err) {
+      showError(err.message || "Failed to delete poll");
+    }
+  });
+}
+
+// ============ COMMUNITY PAGE ============
 async function renderComplaints() {
   try {
     const [complaints, staff] = await Promise.all([

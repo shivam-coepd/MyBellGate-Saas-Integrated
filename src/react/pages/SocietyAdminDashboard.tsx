@@ -58,7 +58,7 @@ const SocietyAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [societyData, setSocietyData] = useState<SocietyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards' | 'community' | 'events'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards' | 'community' | 'events' | 'communications'>('overview');
 
   useEffect(() => {
     if (user?.society_id) {
@@ -366,6 +366,16 @@ const SocietyAdminDashboard: React.FC = () => {
           >
             Events
           </button>
+          <button
+            onClick={() => setActiveTab('communications')}
+            className={`px-4 py-2 font-medium whitespace-nowrap ${
+              activeTab === 'communications'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Communications
+          </button>
         </div>
       </div>
 
@@ -532,6 +542,12 @@ const SocietyAdminDashboard: React.FC = () => {
                   className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition text-sm font-medium"
                 >
                   Community Management
+                </button>
+                <button
+                  onClick={() => navigate('/admin/communications')}
+                  className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition text-sm font-medium"
+                >
+                  Communications & Polls
                 </button>
               </div>
             </div>
@@ -757,6 +773,28 @@ const SocietyAdminDashboard: React.FC = () => {
                 className="text-orange-500 hover:text-orange-600 underline"
               >
                 Click here to access full events management interface
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'communications' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Communications & Polls</h2>
+              <button 
+                onClick={() => navigate('/admin/communications')}
+                className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition"
+              >
+                Manage Communications
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <button 
+                onClick={() => navigate('/admin/communications')}
+                className="text-indigo-500 hover:text-indigo-600 underline"
+              >
+                Click here to access full communications management interface
               </button>
             </div>
           </div>

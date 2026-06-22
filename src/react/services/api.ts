@@ -641,6 +641,30 @@ class ApiClient {
     return this.request(`/marketplace/products${queryString ? `?${queryString}` : ''}`);
   }
 
+  // Communications & Polls
+  async getPolls(params?: { page?: number; limit?: number }) {
+    const queryString = new URLSearchParams(params as any).toString();
+    return this.request(`/communications/polls${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async createPoll(data: any) {
+    return this.request('/communications/polls', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePoll(id: string | number, data: any) {
+    return this.request(`/communications/polls/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePoll(id: string | number) {
+    return this.request(`/communications/polls/${id}`, { method: 'DELETE' });
+  }
+
   // Events Management
   async getEvents(params?: { page?: number; limit?: number }) {
     const queryString = new URLSearchParams(params as any).toString();
