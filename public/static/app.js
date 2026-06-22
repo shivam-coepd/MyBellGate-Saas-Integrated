@@ -3161,7 +3161,7 @@ function renderEventCards(events) {
   
   return events.map(ev => {
     const date = ev.event_date ? new Date(ev.event_date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Unknown';
-    const attendees = ev.attendees ? ev.attendees.length : (ev.attendees_count || 0);
+    const attendees = Array.isArray(ev.attendees) ? ev.attendees.length : (ev.attendees || ev.attendees_count || 0);
     
     return `
       <tr>
