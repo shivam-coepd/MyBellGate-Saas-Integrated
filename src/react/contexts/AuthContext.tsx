@@ -67,20 +67,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       // User is not authenticated
       setErrorMsg("No Society ID found in user data");
       setTimeout(() => setErrorMsg(null), 4000);
-      {
-        errorMsg && (
-          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
-            <AlertCircle className="w-5 h-5" />
-            <span className="font-medium text-sm">{errorMsg}</span>
-            <button
-              onClick={() => setErrorMsg(null)}
-              className="ml-4 hover:text-red-200 text-lg leading-none"
-            >
-              &times;
-            </button>
-          </div>
-        );
-      }
     } finally {
       setLoading(false);
     }
@@ -143,7 +129,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     isResident: user?.role === "resident",
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {/* Snackbar Error Popup */}
+      {errorMsg && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
+          <AlertCircle className="w-5 h-5" />
+          <span className="font-medium text-sm">{errorMsg}</span>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="ml-4 hover:text-red-200 text-lg leading-none"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
