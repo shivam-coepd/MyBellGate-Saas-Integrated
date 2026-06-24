@@ -2766,6 +2766,8 @@ async function renderBilling() {
 }
 
 function renderBillCards(bills) {
+  console.log("Bills:- ", bills);
+  
   if (bills.length === 0)
     return emptyState(
       "fa-file-invoice",
