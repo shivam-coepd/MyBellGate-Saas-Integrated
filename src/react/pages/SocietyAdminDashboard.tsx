@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import apiClient from '../services/api';
-import NotificationBell from '../components/NotificationBell';
-import { 
-  Users, Building2, DollarSign, AlertCircle, CheckCircle, 
-  Clock, FileText, Bell, Shield, Package, Wrench 
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import apiClient from "../services/api";
+import NotificationBell from "../components/NotificationBell";
+import {
+  Users,
+  Building2,
+  DollarSign,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileText,
+  Bell,
+  Shield,
+  Package,
+  Wrench,
+} from "lucide-react";
 
 interface SocietyData {
   id: number;
@@ -58,7 +67,18 @@ const SocietyAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [societyData, setSocietyData] = useState<SocietyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'buildings' | 'finance' | 'helpdesk' | 'guards' | 'community' | 'events' | 'communications'>('overview');
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    | "overview"
+    | "users"
+    | "buildings"
+    | "finance"
+    | "helpdesk"
+    | "guards"
+    | "community"
+    | "events"
+    | "communications"
+  >("overview");
 
   useEffect(() => {
     if (user?.society_id) {
@@ -69,26 +89,29 @@ const SocietyAdminDashboard: React.FC = () => {
   const loadSocietyData = async () => {
     try {
       setLoading(true);
-      
+
       if (!user?.society_id) {
-        console.error('No society_id found in user data');
-        console.log('No society_id found in user data');
+        setError("No society_id found in user data");
+        setTimeout(() => setError(null), 4000);
+
         setSocietyData(null);
         return;
       }
 
       // Try to get complete society data first
-      const response = await apiClient.getCompleteSociety(user.society_id.toString());
-      
+      const response = await apiClient.getCompleteSociety(
+        user.society_id.toString(),
+      );
+
       if (response.success && response.data) {
         setSocietyData(response.data as SocietyData);
       } else {
-        console.error('API returned error or no data:', response.message);
+        console.error("API returned error or no data:", response.message);
         // If the endpoint doesn't work, try to build data from individual endpoints
         await loadSocietyDataFromIndividualEndpoints();
       }
     } catch (error) {
-      console.error('Error loading society data:', error);
+      console.error("Error loading society data:", error);
       // Try fallback to individual endpoints
       await loadSocietyDataFromIndividualEndpoints();
     } finally {
@@ -103,55 +126,74 @@ const SocietyAdminDashboard: React.FC = () => {
       if (!societyId) return;
 
       // Make parallel API calls similar to SuperAdminDashboard
-      const [usersRes, buildingsRes, invoicesRes, ticketsRes] = await Promise.all([
-        apiClient.getUsers({ society_id: societyId, limit: 1000 }),
-        apiClient.getBuildingsBySociety(societyId),
-        apiClient.getInvoices({ limit: 1000 }),
-        apiClient.getTickets({ limit: 1000 }),
-      ]);
+      const [usersRes, buildingsRes, invoicesRes, ticketsRes] =
+        await Promise.all([
+          apiClient.getUsers({ society_id: societyId, limit: 1000 }),
+          apiClient.getBuildingsBySociety(societyId),
+          apiClient.getInvoices({ limit: 1000 }),
+          apiClient.getTickets({ limit: 1000 }),
+        ]);
 
       // Calculate statistics from the responses
       const users = usersRes.success ? (usersRes.data as any[]) || [] : [];
-      const buildings = buildingsRes.success ? (buildingsRes.data as any[]) || [] : [];
-      const invoices = invoicesRes.success ? (invoicesRes.data as any[]) || [] : [];
-      const tickets = ticketsRes.success ? (ticketsRes.data as any[]) || [] : [];
+      const buildings = buildingsRes.success
+        ? (buildingsRes.data as any[]) || []
+        : [];
+      const invoices = invoicesRes.success
+        ? (invoicesRes.data as any[]) || []
+        : [];
+      const tickets = ticketsRes.success
+        ? (ticketsRes.data as any[]) || []
+        : [];
 
-      const residents = users.filter((u: any) => u.role === 'resident');
-      const guards = users.filter((u: any) => u.role === 'guard');
-      const staff = users.filter((u: any) => u.role === 'staff');
-      const admins = users.filter((u: any) => u.role === 'admin');
+      const residents = users.filter((u: any) => u.role === "resident");
+      const guards = users.filter((u: any) => u.role === "guard");
+      const staff = users.filter((u: any) => u.role === "staff");
+      const admins = users.filter((u: any) => u.role === "admin");
 
-      const totalFlats = buildings.reduce((sum: number, b: any) => sum + (b.total_flats || 0), 0);
-      const occupiedFlats = buildings.reduce((sum: number, b: any) => sum + (b.occupied_flats || 0), 0);
+      const totalFlats = buildings.reduce(
+        (sum: number, b: any) => sum + (b.total_flats || 0),
+        0,
+      );
+      const occupiedFlats = buildings.reduce(
+        (sum: number, b: any) => sum + (b.occupied_flats || 0),
+        0,
+      );
 
       const paidRevenue = invoices
-        .filter((i: any) => i.status === 'paid')
+        .filter((i: any) => i.status === "paid")
         .reduce((sum: number, i: any) => sum + (i.total_amount || 0), 0);
       const pendingRevenue = invoices
-        .filter((i: any) => i.status === 'sent' || i.status === 'draft')
+        .filter((i: any) => i.status === "sent" || i.status === "draft")
         .reduce((sum: number, i: any) => sum + (i.total_amount || 0), 0);
       const overdueRevenue = invoices
-        .filter((i: any) => i.status === 'overdue')
+        .filter((i: any) => i.status === "overdue")
         .reduce((sum: number, i: any) => sum + (i.total_amount || 0), 0);
 
-      const openTickets = tickets.filter((t: any) => t.status === 'open').length;
-      const inProgressTickets = tickets.filter((t: any) => t.status === 'in_progress').length;
-      const resolvedTickets = tickets.filter((t: any) => t.status === 'resolved').length;
+      const openTickets = tickets.filter(
+        (t: any) => t.status === "open",
+      ).length;
+      const inProgressTickets = tickets.filter(
+        (t: any) => t.status === "in_progress",
+      ).length;
+      const resolvedTickets = tickets.filter(
+        (t: any) => t.status === "resolved",
+      ).length;
 
       // Build society data object
       const societyData: SocietyData = {
         id: user.society_id || 0,
-        name: user.society_name || 'My Society',
-        address: '',
-        city: '',
-        state: '',
-        country: 'India',
-        pincode: '',
-        contact_person: '',
-        contact_phone: '',
-        contact_email: '',
-        plan: 'professional',
-        code: user.society_code || '',
+        name: user.society_name || "My Society",
+        address: "",
+        city: "",
+        state: "",
+        country: "India",
+        pincode: "",
+        contact_person: "",
+        contact_phone: "",
+        contact_email: "",
+        plan: "professional",
+        code: user.society_code || "",
         total_flats: totalFlats,
         towers: buildings.length,
         user_statistics: {
@@ -160,8 +202,9 @@ const SocietyAdminDashboard: React.FC = () => {
           guards: guards.length,
           staff: staff.length,
           admins: admins.length,
-          active_users: users.filter((u: any) => u.status === 'active').length,
-          inactive_users: users.filter((u: any) => u.status !== 'active').length,
+          active_users: users.filter((u: any) => u.status === "active").length,
+          inactive_users: users.filter((u: any) => u.status !== "active")
+            .length,
         },
         financial_summary: {
           total_invoices: invoices.length,
@@ -186,7 +229,10 @@ const SocietyAdminDashboard: React.FC = () => {
 
       setSocietyData(societyData);
     } catch (error) {
-      console.error('Error loading society data from individual endpoints:', error);
+      console.error(
+        "Error loading society data from individual endpoints:",
+        error,
+      );
       setSocietyData(null);
     }
   };
@@ -205,9 +251,12 @@ const SocietyAdminDashboard: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="bg-white rounded-lg shadow-md p-8 max-w-md text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">No Society Linked</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            No Society Linked
+          </h2>
           <p className="text-gray-600 mb-6">
-            Your account is not linked to any society. Please contact the administrator to link your account to a society.
+            Your account is not linked to any society. Please contact the
+            administrator to link your account to a society.
           </p>
           <button
             onClick={logout}
@@ -226,9 +275,12 @@ const SocietyAdminDashboard: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="bg-white rounded-lg shadow-md p-8 max-w-md text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Unable to Load Society Data</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Unable to Load Society Data
+          </h2>
           <p className="text-gray-600 mb-6">
-            There was an error loading the society data. Please try refreshing the page or contact support if the issue persists.
+            There was an error loading the society data. Please try refreshing
+            the page or contact support if the issue persists.
           </p>
           <div className="flex justify-center space-x-4">
             <button
@@ -249,8 +301,12 @@ const SocietyAdminDashboard: React.FC = () => {
     );
   }
 
-  const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color: string }> = 
-    ({ title, value, icon, color }) => (
+  const StatCard: React.FC<{
+    title: string;
+    value: string | number;
+    icon: React.ReactNode;
+    color: string;
+  }> = ({ title, value, icon, color }) => (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -268,8 +324,12 @@ const SocietyAdminDashboard: React.FC = () => {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">{societyData?.name}</h1>
-            <p className="text-gray-500">Admin Dashboard - {societyData?.city}, {societyData?.state}</p>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {societyData?.name}
+            </h1>
+            <p className="text-gray-500">
+              Admin Dashboard - {societyData?.city}, {societyData?.state}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
@@ -287,91 +347,91 @@ const SocietyAdminDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 mt-6">
         <div className="flex space-x-4 border-b overflow-x-auto">
           <button
-            onClick={() => setActiveTab('overview')}
+            onClick={() => setActiveTab("overview")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'overview'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "overview"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Overview
           </button>
           <button
-            onClick={() => setActiveTab('users')}
+            onClick={() => setActiveTab("users")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'users'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "users"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Users
           </button>
           <button
-            onClick={() => setActiveTab('buildings')}
+            onClick={() => setActiveTab("buildings")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'buildings'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "buildings"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Buildings & Flats
           </button>
           <button
-            onClick={() => setActiveTab('finance')}
+            onClick={() => setActiveTab("finance")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'finance'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "finance"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Finance
           </button>
           <button
-            onClick={() => setActiveTab('helpdesk')}
+            onClick={() => setActiveTab("helpdesk")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'helpdesk'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "helpdesk"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Helpdesk
           </button>
           <button
-            onClick={() => setActiveTab('guards')}
+            onClick={() => setActiveTab("guards")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'guards'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "guards"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Guards
           </button>
           <button
-            onClick={() => setActiveTab('community')}
+            onClick={() => setActiveTab("community")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'community'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "community"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Community
           </button>
           <button
-            onClick={() => setActiveTab('events')}
+            onClick={() => setActiveTab("events")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'events'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "events"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Events
           </button>
           <button
-            onClick={() => setActiveTab('communications')}
+            onClick={() => setActiveTab("communications")}
             className={`px-4 py-2 font-medium whitespace-nowrap ${
-              activeTab === 'communications'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === "communications"
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Communications
@@ -381,11 +441,13 @@ const SocietyAdminDashboard: React.FC = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {activeTab === 'overview' && societyData && (
+        {activeTab === "overview" && societyData && (
           <div>
             {/* Society Info */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Society Information</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Society Information
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <p className="text-gray-500 text-sm">Society Code</p>
@@ -439,23 +501,33 @@ const SocietyAdminDashboard: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">User Statistics</h2>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{societyData.user_statistics.residents}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {societyData.user_statistics.residents}
+                  </p>
                   <p className="text-sm text-gray-600">Residents</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">{societyData.user_statistics.guards}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {societyData.user_statistics.guards}
+                  </p>
                   <p className="text-sm text-gray-600">Guards</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-2xl font-bold text-purple-600">{societyData.user_statistics.staff}</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {societyData.user_statistics.staff}
+                  </p>
                   <p className="text-sm text-gray-600">Staff</p>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-2xl font-bold text-yellow-600">{societyData.user_statistics.admins}</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {societyData.user_statistics.admins}
+                  </p>
                   <p className="text-sm text-gray-600">Admins</p>
                 </div>
                 <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{societyData.user_statistics.inactive_users}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {societyData.user_statistics.inactive_users}
+                  </p>
                   <p className="text-sm text-gray-600">Inactive</p>
                 </div>
               </div>
@@ -467,19 +539,31 @@ const SocietyAdminDashboard: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-gray-600">Total Revenue</p>
-                  <p className="text-xl font-bold text-green-600">₹{societyData.financial_summary.total_revenue.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-green-600">
+                    ₹
+                    {societyData.financial_summary.total_revenue.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-600">Paid Revenue</p>
-                  <p className="text-xl font-bold text-blue-600">₹{societyData.financial_summary.paid_revenue.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-blue-600">
+                    ₹
+                    {societyData.financial_summary.paid_revenue.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-4 bg-yellow-50 rounded-lg">
                   <p className="text-sm text-gray-600">Pending Revenue</p>
-                  <p className="text-xl font-bold text-yellow-600">₹{societyData.financial_summary.pending_revenue.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-yellow-600">
+                    ₹
+                    {societyData.financial_summary.pending_revenue.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-4 bg-red-50 rounded-lg">
                   <p className="text-sm text-gray-600">Overdue Revenue</p>
-                  <p className="text-xl font-bold text-red-600">₹{societyData.financial_summary.overdue_revenue.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-red-600">
+                    ₹
+                    {societyData.financial_summary.overdue_revenue.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
@@ -493,7 +577,9 @@ const SocietyAdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-500 text-sm">Total Assets</p>
-                    <p className="text-2xl font-bold">{societyData.assets_summary.total_assets}</p>
+                    <p className="text-2xl font-bold">
+                      {societyData.assets_summary.total_assets}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -504,7 +590,9 @@ const SocietyAdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-500 text-sm">Active Assets</p>
-                    <p className="text-2xl font-bold">{societyData.assets_summary.active_assets}</p>
+                    <p className="text-2xl font-bold">
+                      {societyData.assets_summary.active_assets}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -515,7 +603,9 @@ const SocietyAdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-500 text-sm">Total Vehicles</p>
-                    <p className="text-2xl font-bold">{societyData.total_vehicles}</p>
+                    <p className="text-2xl font-bold">
+                      {societyData.total_vehicles}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -526,25 +616,25 @@ const SocietyAdminDashboard: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={() => setActiveTab('users')}
+                  onClick={() => setActiveTab("users")}
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm font-medium"
                 >
                   Manage Users
                 </button>
                 <button
-                  onClick={() => navigate('/admin/guards')}
+                  onClick={() => navigate("/admin/guards")}
                   className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm font-medium"
                 >
                   Manage Guards
                 </button>
                 <button
-                  onClick={() => navigate('/admin/community')}
+                  onClick={() => navigate("/admin/community")}
                   className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition text-sm font-medium"
                 >
                   Community Management
                 </button>
                 <button
-                  onClick={() => navigate('/admin/communications')}
+                  onClick={() => navigate("/admin/communications")}
                   className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition text-sm font-medium"
                 >
                   Communications & Polls
@@ -554,19 +644,19 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'users' && (
+        {activeTab === "users" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">User Management</h2>
               <div className="flex space-x-2">
-                <button 
-                  onClick={() => navigate('/admin/guards')}
+                <button
+                  onClick={() => navigate("/admin/guards")}
                   className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm"
                 >
                   Manage Guards
                 </button>
-                <button 
-                  onClick={() => navigate('/admin/users')}
+                <button
+                  onClick={() => navigate("/admin/users")}
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm"
                 >
                   All Users
@@ -600,8 +690,8 @@ const SocietyAdminDashboard: React.FC = () => {
               />
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/users')}
+              <button
+                onClick={() => navigate("/admin/users")}
                 className="text-blue-500 hover:text-blue-600 underline"
               >
                 Click here to access full user management interface
@@ -610,12 +700,12 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'buildings' && (
+        {activeTab === "buildings" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Buildings & Flats</h2>
-              <button 
-                onClick={() => navigate('/admin/buildings')}
+              <button
+                onClick={() => navigate("/admin/buildings")}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
               >
                 Manage Buildings
@@ -624,16 +714,20 @@ const SocietyAdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600">Total Towers</p>
-                <p className="text-2xl font-bold text-blue-600">{societyData?.towers}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {societyData?.towers}
+                </p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
                 <p className="text-sm text-gray-600">Total Flats</p>
-                <p className="text-2xl font-bold text-green-600">{societyData?.total_flats}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {societyData?.total_flats}
+                </p>
               </div>
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/buildings')}
+              <button
+                onClick={() => navigate("/admin/buildings")}
                 className="text-blue-500 hover:text-blue-600 underline"
               >
                 Click here to access full building and flat management interface
@@ -642,12 +736,12 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'finance' && (
+        {activeTab === "finance" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Finance Management</h2>
-              <button 
-                onClick={() => navigate('/admin/accounting')}
+              <button
+                onClick={() => navigate("/admin/accounting")}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
               >
                 Manage Accounting
@@ -656,24 +750,36 @@ const SocietyAdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-green-50 rounded-lg">
                 <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-xl font-bold text-green-600">₹{societyData?.financial_summary.total_revenue.toLocaleString()}</p>
+                <p className="text-xl font-bold text-green-600">
+                  ₹
+                  {societyData?.financial_summary.total_revenue.toLocaleString()}
+                </p>
               </div>
               <div className="p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600">Paid Revenue</p>
-                <p className="text-xl font-bold text-blue-600">₹{societyData?.financial_summary.paid_revenue.toLocaleString()}</p>
+                <p className="text-xl font-bold text-blue-600">
+                  ₹
+                  {societyData?.financial_summary.paid_revenue.toLocaleString()}
+                </p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <p className="text-sm text-gray-600">Pending Revenue</p>
-                <p className="text-xl font-bold text-yellow-600">₹{societyData?.financial_summary.pending_revenue.toLocaleString()}</p>
+                <p className="text-xl font-bold text-yellow-600">
+                  ₹
+                  {societyData?.financial_summary.pending_revenue.toLocaleString()}
+                </p>
               </div>
               <div className="p-4 bg-red-50 rounded-lg">
                 <p className="text-sm text-gray-600">Overdue Revenue</p>
-                <p className="text-xl font-bold text-red-600">₹{societyData?.financial_summary.overdue_revenue.toLocaleString()}</p>
+                <p className="text-xl font-bold text-red-600">
+                  ₹
+                  {societyData?.financial_summary.overdue_revenue.toLocaleString()}
+                </p>
               </div>
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/accounting')}
+              <button
+                onClick={() => navigate("/admin/accounting")}
                 className="text-blue-500 hover:text-blue-600 underline"
               >
                 Click here to access full accounting management interface
@@ -682,7 +788,7 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'helpdesk' && (
+        {activeTab === "helpdesk" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Helpdesk Management</h2>
@@ -693,39 +799,49 @@ const SocietyAdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600">Total Tickets</p>
-                <p className="text-xl font-bold text-blue-600">{societyData?.helpdesk_summary.total_tickets}</p>
+                <p className="text-xl font-bold text-blue-600">
+                  {societyData?.helpdesk_summary.total_tickets}
+                </p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <p className="text-sm text-gray-600">Open Tickets</p>
-                <p className="text-xl font-bold text-yellow-600">{societyData?.helpdesk_summary.open_tickets}</p>
+                <p className="text-xl font-bold text-yellow-600">
+                  {societyData?.helpdesk_summary.open_tickets}
+                </p>
               </div>
               <div className="p-4 bg-orange-50 rounded-lg">
                 <p className="text-sm text-gray-600">In Progress</p>
-                <p className="text-xl font-bold text-orange-600">{societyData?.helpdesk_summary.in_progress_tickets}</p>
+                <p className="text-xl font-bold text-orange-600">
+                  {societyData?.helpdesk_summary.in_progress_tickets}
+                </p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
                 <p className="text-sm text-gray-600">Resolved</p>
-                <p className="text-xl font-bold text-green-600">{societyData?.helpdesk_summary.resolved_tickets}</p>
+                <p className="text-xl font-bold text-green-600">
+                  {societyData?.helpdesk_summary.resolved_tickets}
+                </p>
               </div>
             </div>
-            <p className="text-gray-500 text-center py-8">Helpdesk management interface coming soon...</p>
+            <p className="text-gray-500 text-center py-8">
+              Helpdesk management interface coming soon...
+            </p>
           </div>
         )}
 
-        {activeTab === 'guards' && (
+        {activeTab === "guards" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Guards Management</h2>
-              <button 
-                onClick={() => navigate('/admin/guards')}
+              <button
+                onClick={() => navigate("/admin/guards")}
                 className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
               >
                 Manage Guards
               </button>
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/guards')}
+              <button
+                onClick={() => navigate("/admin/guards")}
                 className="text-green-500 hover:text-green-600 underline"
               >
                 Click here to access full guards management interface
@@ -734,20 +850,20 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'community' && (
+        {activeTab === "community" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Community Management</h2>
-              <button 
-                onClick={() => navigate('/admin/community')}
+              <button
+                onClick={() => navigate("/admin/community")}
                 className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
               >
                 Manage Community
               </button>
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/community')}
+              <button
+                onClick={() => navigate("/admin/community")}
                 className="text-purple-500 hover:text-purple-600 underline"
               >
                 Click here to access full community management interface
@@ -756,20 +872,20 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'events' && (
+        {activeTab === "events" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Events Management</h2>
-              <button 
-                onClick={() => navigate('/admin/events')}
+              <button
+                onClick={() => navigate("/admin/events")}
                 className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition"
               >
                 Manage Events
               </button>
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/events')}
+              <button
+                onClick={() => navigate("/admin/events")}
                 className="text-orange-500 hover:text-orange-600 underline"
               >
                 Click here to access full events management interface
@@ -778,20 +894,20 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'communications' && (
+        {activeTab === "communications" && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Communications & Polls</h2>
-              <button 
-                onClick={() => navigate('/admin/communications')}
+              <button
+                onClick={() => navigate("/admin/communications")}
                 className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition"
               >
                 Manage Communications
               </button>
             </div>
             <div className="text-center py-8">
-              <button 
-                onClick={() => navigate('/admin/communications')}
+              <button
+                onClick={() => navigate("/admin/communications")}
                 className="text-indigo-500 hover:text-indigo-600 underline"
               >
                 Click here to access full communications management interface
@@ -800,6 +916,17 @@ const SocietyAdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Snackbar Error Popup */}
+      {error && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 transition-all duration-300">
+          <AlertCircle className="w-5 h-5" />
+          <span className="font-medium text-sm">{error}</span>
+          <button onClick={() => setError(null)} className="ml-4 hover:text-red-200 text-lg leading-none">
+            &times;
+          </button>
+        </div>
+      )}
     </div>
   );
 };

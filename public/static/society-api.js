@@ -71,7 +71,6 @@ const SocietyBridge = (() => {
         }
       } catch (e) {}
     }
-    console.log("societyId called with user :- ", u);
     return u?.society_id ?? u?.societyId ?? null;
   }
 
@@ -364,7 +363,6 @@ const SocietyBridge = (() => {
 
   async function getCompleteSociety(force) {
     const sid = societyId();
-    console.log("getCompleteSociety called with society id :- ", sid);
     if (!sid) throw new Error("No society linked to this account");
     const now = Date.now();
     if (!force && completeCache && now - completeCacheAt < 45000) {

@@ -3,7 +3,6 @@
    Complete Frontend Application
    ============================================ */
 
-console.log("app.js starting...");
 ("use strict");
 
 // ============ STATE MANAGEMENT ============
@@ -36,7 +35,6 @@ const API = {
       State.user?.role !== "superadmin"
     ) {
       try {
-        console.log(`📡 SocietyBridge ${method} ${endpoint}`);
         return await SocietyBridge.handleRequest(method, endpoint, body);
       } catch (err) {
         throw err;
@@ -45,14 +43,10 @@ const API = {
     const headers = { "Content-Type": "application/json" };
     if (State.token) {
       headers["Authorization"] = `Bearer ${State.token}`;
-      console.log("🔑 Using token:", State.token.substring(0, 20) + "...");
-    } else {
-      console.warn("⚠️ No token available for request:", endpoint);
     }
     const opts = { method, headers };
     if (body) opts.body = JSON.stringify(body);
     try {
-      console.log(`📡 API ${method} ${this.base}${endpoint}`);
       const res = await fetch(`${this.base}${endpoint}`, opts);
       const json = await res.json();
 
@@ -2765,9 +2759,7 @@ async function renderBilling() {
   }
 }
 
-function renderBillCards(bills) {
-  console.log("Bills:- ", bills);
-  
+function renderBillCards(bills) {  
   if (bills.length === 0)
     return emptyState(
       "fa-file-invoice",
@@ -4271,12 +4263,8 @@ function setupModalClose(id) {
 
 // ============ INIT ============
 function init() {
-  console.log("=== INITIALIZING APP ===");
   const savedToken = localStorage.getItem("gh_token");
   const savedUser = localStorage.getItem("gh_user");
-
-  console.log("Saved Token:", savedToken ? "EXISTS" : "NOT FOUND");
-  console.log("Saved User:", savedUser ? savedUser : "NOT FOUND");
 
   if (savedToken && savedUser) {
     State.token = savedToken;
@@ -4285,8 +4273,6 @@ function init() {
       if (typeof SocietyBridge !== "undefined") {
         State.user = SocietyBridge.normalizeUser(State.user);
       }
-      console.log("✅ User parsed successfully:", State.user);
-      console.log("User role:", State.user.role);
 
       // Trust the saved session and render immediately
       // (Backend doesn't have /auth/me endpoint, so we skip verification)
@@ -4294,17 +4280,12 @@ function init() {
         State.user.role === "super_admin" ||
         State.user.role === "superadmin"
       ) {
-        console.log("👑 Rendering Super Admin App...");
         renderSuperAdminApp();
       } else {
-        console.log("🏠 Rendering Regular App...");
         renderApp();
       }
 
-      console.log("✅ Session restored successfully from localStorage");
     } catch (e) {
-      // Failed to parse user data
-      console.error("❌ Failed to restore session:", e);
       localStorage.removeItem("gh_token");
       localStorage.removeItem("gh_user");
       State.token = null;
@@ -4312,8 +4293,6 @@ function init() {
       renderLogin();
     }
   } else {
-    // No session — show login page
-    console.log("ℹ️ No session found, showing login");
     renderLogin();
   }
 }
@@ -4538,7 +4517,6 @@ async function renderSADashboard() {
   }
 
   try {
-    console.log("Loading Super Admin dashboard...");
 
     // Show loading state
     pc.innerHTML =
@@ -4546,8 +4524,6 @@ async function renderSADashboard() {
 
     const stats = await API.get("/superadmin/stats");
     if (!stats) throw new Error("No statistics data received");
-
-    console.log("Stats loaded:", stats);
 
     pc.innerHTML = `
       <div class="sa-stats-grid">

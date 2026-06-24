@@ -1,5 +1,10 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getMessaging, getToken, onMessage, MessagePayload } from "firebase/messaging";
+import {
+  getMessaging,
+  getToken,
+  onMessage,
+  MessagePayload,
+} from "firebase/messaging";
 import apiClient from "./api";
 
 const firebaseConfig = {
@@ -33,7 +38,6 @@ export const requestFirebasePermission = async (): Promise<string | null> => {
 
   // 2. Request notification permission
   const permission = await Notification.requestPermission();
-  console.log("[FCM] Notification permission:", permission);
   if (permission !== "granted") {
     console.warn("[FCM] Notification permission denied.");
     return null;
@@ -44,9 +48,8 @@ export const requestFirebasePermission = async (): Promise<string | null> => {
     //    knows which SW to use for push events.
     const swRegistration = await navigator.serviceWorker.register(
       "/firebase-messaging-sw.js",
-      { scope: "/" }
+      { scope: "/" },
     );
-    console.log("[FCM] Service worker registered:", swRegistration.scope);
 
     // 4. Get the Messaging instance bound to the registered SW
     const messaging = getMessaging(app);
@@ -58,27 +61,22 @@ export const requestFirebasePermission = async (): Promise<string | null> => {
     });
 
     if (!token) {
-      console.warn("[FCM] getToken() returned empty — check VAPID key and Firebase project settings.");
+      console.warn(
+        "[FCM] getToken() returned empty — check VAPID key and Firebase project settings.",
+      );
       return null;
     }
-
-    console.log("[FCM] Push token obtained:", token);
 
     // 6. Send token to our backend
     try {
       const res = await apiClient.registerWebPushToken(token);
       if (res?.success) {
-        console.log("[FCM] Token registered with backend successfully.");
       } else {
-        console.warn("[FCM] Backend returned failure:", res?.message);
       }
-    } catch (backendErr) {
-      console.error("[FCM] Failed to register token with backend:", backendErr);
-    }
+    } catch (backendErr) {}
 
     return token;
   } catch (err) {
-    console.error("[FCM] Error during FCM setup:", err);
     return null;
   }
 };
