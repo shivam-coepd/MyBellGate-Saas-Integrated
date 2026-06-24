@@ -65,8 +65,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
     } catch (error) {
       // User is not authenticated
-      setErrorMsg("No Society ID found in user data");
-      setTimeout(() => setErrorMsg(null), 4000);
+      // setErrorMsg("No Society ID found in user data");
+      // setTimeout(() => setErrorMsg(null), 4000);
     } finally {
       setLoading(false);
     }

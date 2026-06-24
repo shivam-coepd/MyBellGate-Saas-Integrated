@@ -2,14 +2,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/cloudflare-workers";
-import authRoutes from "./routes/auth";
-import residentsRoutes from "./routes/residents";
-import visitorsRoutes from "./routes/visitors";
-import complaintsRoutes from "./routes/complaints";
-import noticesRoutes from "./routes/notices";
-import billingRoutes from "./routes/billing";
-import dashboardRoutes from "./routes/dashboard";
-import superAdminRoutes from "./routes/superadmin";
 
 const app = new Hono();
 
@@ -24,14 +16,6 @@ app.use(
     manifest: "",
   }),
 );
-// app.route('/api/auth', authRoutes)
-// app.route('/api/residents', residentsRoutes)
-// app.route('/api/visitors', visitorsRoutes)
-// app.route('/api/complaints', complaintsRoutes)
-// app.route('/api/notices', noticesRoutes)
-// app.route('/api/billing', billingRoutes)
-// app.route('/api/dashboard', dashboardRoutes)
-// app.route('/api/superadmin', superAdminRoutes)
 
 // /app and /app/* → SaaS platform (vanilla JS dashboard)
 app.get("/app", (c) => c.html(getAppHTML()));
