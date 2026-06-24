@@ -290,8 +290,8 @@ const SocietyBridge = (() => {
       totalAmount: _invoiceGrandTotal(i),
       status: mapInvoiceStatus(i.status),
       dueDate: i.due_date || i.invoice_date,
-      paidDate: i.status === "paid" ? i.updated_at : null,
-      paymentMethod: null,
+      paidDate: i.paid_date || (i.status === "paid" ? i.updated_at : null),
+      paymentMethod: i.payment_method ? mapPaymentMethod(i.payment_method) : null,
     };
   }
 
